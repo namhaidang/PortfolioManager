@@ -4,7 +4,7 @@ import { hash } from "bcryptjs";
 import { ulid } from "ulidx";
 import * as schema from "./schema";
 
-const client = createClient({ url: "file:data/local.db" });
+const client = createClient({ url: process.env.DATABASE_URL || "file:./data/local.db" });
 const db = drizzle(client, { schema });
 
 const INCOME_CATEGORIES = [

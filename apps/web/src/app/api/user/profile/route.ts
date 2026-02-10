@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { db } from "@repo/db";
+import { users } from "@repo/db/schema";
 
 export async function PATCH(request: Request) {
   const session = await auth();

@@ -11,6 +11,8 @@ build/
 # env
 .env
 .env*.local
+apps/web/.env
+packages/db/.env
 
 # database
 data/

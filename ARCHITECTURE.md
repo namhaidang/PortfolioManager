@@ -19,39 +19,60 @@
 
 ---
 
-## 2. Project Structure
+## 2. Project Structure (Monorepo)
+
+npm workspaces monorepo with optional Turborepo for task orchestration.
 
 ```
-src/
-├── app/
-│   ├── (auth)/                 # Login & registration
-│   ├── (app)/                  # Authenticated shell
-│   │   ├── dashboard/
-│   │   ├── income/
-│   │   ├── expenses/
-│   │   ├── portfolio/
-│   │   ├── budgets/
-│   │   ├── reports/
-│   │   └── settings/
-│   └── api/                    # Route handlers
-├── components/
-│   ├── ui/                     # shadcn/ui primitives
-│   ├── charts/
-│   ├── forms/
-│   └── layout/                 # Shell, sidebar, nav
-├── lib/
-│   ├── db/                     # Schema, client, migrations
-│   ├── auth/
-│   ├── services/               # portfolio, cashflow, networth, budget
-│   ├── scrapers/               # vietnam, singapore, fx-rate
-│   ├── ocr/                    # AI vision extraction
-│   ├── scheduler/              # Cron jobs
-│   └── currency.ts
-├── hooks/
-└── types/
+PortfolioManager/
+├── apps/
+│   └── web/                        # Next.js 16 application
+│       ├── src/
+│       │   ├── app/
+│       │   │   ├── (auth)/         # Login & registration
+│       │   │   ├── (app)/          # Authenticated shell
+│       │   │   │   ├── dashboard/
+│       │   │   │   ├── income/
+│       │   │   │   ├── expenses/
+│       │   │   │   ├── portfolio/
+│       │   │   │   ├── budgets/
+│       │   │   │   ├── reports/
+│       │   │   │   └── settings/
+│       │   │   └── api/            # Route handlers
+│       │   ├── components/
+│       │   │   ├── ui/             # shadcn/ui primitives
+│       │   │   ├── charts/
+│       │   │   ├── forms/
+│       │   │   └── layout/         # Shell, sidebar, nav
+│       │   ├── lib/
+│       │   │   ├── services/       # portfolio, cashflow, networth, budget
+│       │   │   ├── scrapers/       # vietnam, singapore, fx-rate
+│       │   │   ├── ocr/            # AI vision extraction
+│       │   │   └── scheduler/      # Cron jobs
+│       │   └── hooks/
+│       ├── next.config.ts
+│       ├── proxy.ts
+│       └── package.json
+├── packages/
+│   ├── db/                         # Database layer (shared)
+│   │   ├── src/
+│   │   │   ├── schema.ts           # Drizzle 13-table schema
+│   │   │   ├── index.ts            # DB client
+│   │   │   └── seed.ts             # Seed script
+│   │   ├── drizzle.config.ts
+│   │   └── package.json
+│   └── shared/                     # Shared utilities & types
+│       ├── src/
+│       │   ├── utils.ts            # cn(), newId(), formatCurrency()
+│       │   └── types.ts            # next-auth type augmentations
+│       └── package.json
+├── data/                           # SQLite file (gitignored)
+├── package.json                    # Workspace root
+├── turbo.json                      # Turborepo task config
+└── ARCHITECTURE.md
 ```
 
-Additional root files: `drizzle/` (migrations), `data/` (SQLite file — gitignored), config files.
+Internal packages use `@repo/db` and `@repo/shared` import aliases.
 
 ---
 

@@ -1,0 +1,19 @@
+{
+  "name": "@repo/shared",
+  "version": "1.0.0",
+  "private": true,
+  "main": "./src/utils.ts",
+  "types": "./src/utils.ts",
+  "exports": {
+    ".": "./src/utils.ts",
+    "./types": "./src/types.ts"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^3.4.0",
+    "ulidx": "^2.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
