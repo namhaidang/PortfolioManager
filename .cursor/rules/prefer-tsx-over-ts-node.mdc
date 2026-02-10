@@ -1,0 +1,8 @@
+---
+description: Always prefer tsx over ts-node
+globs: ["**/*.json", "**/*.sh"]
+alwaysApply: false
+---
+
+When writing scripts or package.json run commands, always use tsx and never use ts-node.  
+

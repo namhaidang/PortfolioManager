@@ -1,0 +1,7 @@
+---
+description: Keep the ARCHITECTURE.md documentation up to date on high level changes.
+globs: 
+alwaysApply: false
+---
+
+Try to proactively keep ARCHITECTURE.md up to date if you are making changes that affect this overall structure or the information within.  Prioritize information that will help LLMs and humans understand and work with the code better. Prefer very compact, non-verbose ways of describing things, maximizing the information density of the document.

@@ -1,0 +1,79 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+---
+description: Automatically maintain documentation files when app components change
+globs: ["apps/frontend/app/**/page.tsx", "apps/frontend/app/**/*.tsx"]
+alwaysApply: false
+---
+
+# Documentation Automation Rule
+
+## Overview
+This rule guides automated documentation updates for page components in the cloud-monorepo.
+
+## File Patterns
+- `apps/frontend/app/*/page.tsx`
+- `apps/frontend/app/*/README.md`
+- `apps/frontend/app/*/CHANGELOG.md`
+
+## Guidelines
+
+### When Creating or Significantly Modifying a Page Component
+
+1. If a README.md doesn't exist:
+   - Automatically create a README.md documenting:
+     - Purpose and overview of the page
+     - Key features and capabilities
+     - Implementation details with architecture breakdown
+     - Usage instructions
+     - Technical considerations
+
+2. If a CHANGELOG.md doesn't exist:
+   - Automatically create a CHANGELOG.md with:
+     - Current features section
+     - Technical implementation details
+     - "Unreleased" section for tracking future changes
+
+### When Updating Existing Components
+
+1. When page.tsx or related component files change:
+   - Update README.md to reflect:
+     - New features or capabilities
+     - Changed architectural components
+     - Updated implementation details
+     - New usage instructions
+
+2. Add entries to CHANGELOG.md under the "Unreleased" section:
+   - Categorize as "Added", "Changed", "Fixed", or "Removed"
+   - Format: `- Brief description of the change`
+   - Include relevant component names
+
+3. Documentation Style:
+   - Keep explanations concise but comprehensive
+   - Focus on implementation architecture and usage patterns
+   - Never include placeholder or hypothetical information
+   - Never add mock or hypothetical dates
+   - Use code examples from actual implementation
+
+## Example
+
+When modifying `apps/frontend/app/traffic-center/page.tsx` to add a new feature:
+
+1. Update README.md to document the new feature
+2. Add to CHANGELOG.md under "Unreleased":
+   ```
+   ### Added
+   - New timeline visualization for traffic density heatmaps
+   ```
+
+## Automation Process
+
+When asked to update documentation for a component:
+1. Analyze the latest code changes
+2. Identify new features, changes, or fixes
+3. Update README.md with implementation details
+4. Add appropriate entries to CHANGELOG.md
+5. Never include any hypothetical information

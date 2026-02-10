@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+When generating a commit message:
+- start with the affected modules in the monorepo, i.e. apps/frontend & apps/api, etc.
+- provide a good semantic summary of the work done
+- provide clear and specific details of key changes
+- call out specific files in the details if it would add clarity
