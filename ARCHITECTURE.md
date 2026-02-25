@@ -10,21 +10,25 @@
 |-------|--------|
 | Framework | Next.js 16 (App Router) · TypeScript |
 | UI | Tailwind CSS · shadcn/ui · Recharts |
-| Database | SQLite (@libsql/client) · Drizzle ORM |
+| Database | PostgreSQL (Neon serverless) · Drizzle ORM |
 | Auth | NextAuth.js v5 (beta) — credentials provider |
 | Scraping | Cheerio + server-side fetch |
 | AI Vision | OpenAI GPT-4o / Google Gemini (screenshot extraction) |
 | Scheduling | node-cron (in-process) |
-| Deployment | Cloud-ready (Fly.io / Railway / Docker) — TBD |
+| Hosting | Vercel (Next.js) · Neon (Postgres, Singapore region) |
+| CI/CD | GitHub Actions · Turborepo remote caching |
 
 ---
 
 ## 2. Project Structure (Monorepo)
 
-npm workspaces monorepo with optional Turborepo for task orchestration.
+npm workspaces monorepo with Turborepo for task orchestration.
 
 ```
 PortfolioManager/
+├── .github/
+│   └── workflows/                  # CI/CD pipelines
+│       └── ci.yml                  # Lint → Type-check → Build → Deploy
 ├── apps/
 │   └── web/                        # Next.js 16 application
 │       ├── src/
@@ -56,9 +60,10 @@ PortfolioManager/
 ├── packages/
 │   ├── db/                         # Database layer (shared)
 │   │   ├── src/
-│   │   │   ├── schema.ts           # Drizzle 13-table schema
-│   │   │   ├── index.ts            # DB client
+│   │   │   ├── schema.ts           # Drizzle 13-table Postgres schema
+│   │   │   ├── index.ts            # Neon DB client
 │   │   │   └── seed.ts             # Seed script
+│   │   ├── drizzle/                # Generated migrations
 │   │   ├── drizzle.config.ts
 │   │   └── package.json
 │   └── shared/                     # Shared utilities & types
@@ -66,13 +71,20 @@ PortfolioManager/
 │       │   ├── utils.ts            # cn(), newId(), formatCurrency()
 │       │   └── types.ts            # next-auth type augmentations
 │       └── package.json
-├── data/                           # SQLite file (gitignored)
 ├── package.json                    # Workspace root
 ├── turbo.json                      # Turborepo task config
 └── ARCHITECTURE.md
 ```
 
 Internal packages use `@repo/db` and `@repo/shared` import aliases.
+
+**Environment variables** (set in Vercel dashboard and local `.env`):
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `DATABASE_URL` | Neon console | Postgres connection string |
+| `AUTH_SECRET` | Generated | NextAuth.js session signing |
+| `AUTH_URL` | Vercel domain | NextAuth.js callback base URL |
 
 ---
 
@@ -108,6 +120,24 @@ Budget ──1:N── BudgetMonthSnapshot
 RecurringRule ──1:N── Transaction (generated)
 ```
 
+### Type Conventions
+
+With Postgres (via Neon), the schema uses proper native types:
+
+| Domain | Postgres Type | Drizzle Builder | Notes |
+|--------|--------------|-----------------|-------|
+| Primary keys | `TEXT` | `text()` | ULID strings |
+| Strings & enums | `TEXT` | `text()` | Postgres enums are an option but TEXT keeps it simple |
+| Booleans | `BOOLEAN` | `boolean()` | Native `true`/`false` (replaces SQLite `INTEGER 0/1`) |
+| Timestamps | `TIMESTAMP` | `timestamp()` | Native timestamp with time zone |
+| Dates | `DATE` | `date()` | Native `YYYY-MM-DD` (replaces SQLite `TEXT`) |
+| Money / amounts | `NUMERIC(18,2)` | `numeric()` | Exact decimal — no floating-point rounding |
+| Prices | `NUMERIC(18,4)` | `numeric()` | 4 decimal places for unit prices |
+| Quantities | `NUMERIC(18,6)` | `numeric()` | 6 decimal places for fractional shares / crypto |
+| Exchange rates | `NUMERIC(18,6)` | `numeric()` | High precision for currency conversion |
+| Integers | `INTEGER` | `integer()` | Counts, sort orders, periods |
+| JSON | `JSONB` | `jsonb()` | Binary JSON with indexing (replaces SQLite `TEXT` JSON) |
+
 ### Entities
 
 **User**
@@ -120,7 +150,7 @@ RecurringRule ──1:N── Transaction (generated)
 | passwordHash | TEXT | |
 | role | TEXT | `owner` · `member` |
 | theme | TEXT | `light` · `dark` |
-| createdAt | INTEGER | Unix ms |
+| createdAt | TIMESTAMP | |
 
 **Account**
 
@@ -131,7 +161,8 @@ RecurringRule ──1:N── Transaction (generated)
 | name | TEXT | e.g. "VPS Securities", "DBS Savings" |
 | type | TEXT | `brokerage` · `bank` · `cash` · `crypto_wallet` · `property` |
 | currency | TEXT | `VND` · `SGD` |
-| isActive | INTEGER | Soft-delete |
+| isActive | BOOLEAN | Soft-delete |
+| createdAt | TIMESTAMP | |
 
 **Category**
 
@@ -157,7 +188,8 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | assetClass | TEXT | `stock` · `etf` · `bond` · `gold` · `crypto` · `real_estate` · `cash` · `other` |
 | market | TEXT | `HOSE` · `HNX` · `UPCOM` · `SGX` · `CRYPTO` · `OTHER` |
 | currency | TEXT | `VND` · `SGD` |
-| isActive | INTEGER | |
+| isActive | BOOLEAN | |
+| createdAt | TIMESTAMP | |
 
 **AssetPrice**
 
@@ -165,10 +197,10 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 |-------|------|-------|
 | id | TEXT (ULID) | PK |
 | assetId | TEXT | FK → Asset |
-| date | TEXT | `YYYY-MM-DD` |
-| price | REAL | Closing price in asset currency |
+| date | DATE | Closing date |
+| price | NUMERIC(18,4) | Closing price in asset currency |
 | source | TEXT | `scraper` · `manual` |
-| createdAt | INTEGER | |
+| createdAt | TIMESTAMP | |
 
 **Transaction**
 
@@ -182,15 +214,15 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | categoryId | TEXT | FK → Category (income/expense only) |
 | assetId | TEXT | FK → Asset (buy/sell/dividend — links dividends to source stock) |
 | recurringRuleId | TEXT | FK → RecurringRule (if auto-generated) |
-| date | TEXT | `YYYY-MM-DD` |
-| amount | REAL | Total in account currency |
-| quantity | REAL | Units (asset txns) |
-| unitPrice | REAL | Per-unit price (asset txns) |
-| fee | REAL | Commission |
-| realizedPnl | REAL | Auto-calculated on sell |
+| date | DATE | Transaction date |
+| amount | NUMERIC(18,2) | Total in account currency |
+| quantity | NUMERIC(18,6) | Units (asset txns) |
+| unitPrice | NUMERIC(18,4) | Per-unit price (asset txns) |
+| fee | NUMERIC(18,2) | Commission |
+| realizedPnl | NUMERIC(18,2) | Auto-calculated on sell |
 | notes | TEXT | |
-| tags | TEXT | JSON string array |
-| createdAt | INTEGER | |
+| tags | JSONB | Array of tag strings |
+| createdAt | TIMESTAMP | |
 
 **Holding**
 
@@ -199,9 +231,9 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | id | TEXT (ULID) | PK |
 | accountId | TEXT | FK → Account |
 | assetId | TEXT | FK → Asset |
-| quantity | REAL | Current units |
-| avgCostBasis | REAL | Average cost per unit |
-| totalCost | REAL | Total invested |
+| quantity | NUMERIC(18,6) | Current units |
+| avgCostBasis | NUMERIC(18,4) | Average cost per unit |
+| totalCost | NUMERIC(18,2) | Total invested |
 | status | TEXT | `open` · `closed` |
 
 **ClosedPosition**
@@ -211,12 +243,12 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | id | TEXT (ULID) | PK |
 | accountId | TEXT | FK → Account |
 | assetId | TEXT | FK → Asset |
-| totalQuantity | REAL | Total shares held |
-| totalCost | REAL | Total cost basis |
-| totalProceeds | REAL | Total sale proceeds |
-| realizedPnl | REAL | Net gain/loss |
-| openDate | TEXT | First buy date |
-| closeDate | TEXT | Final sell date |
+| totalQuantity | NUMERIC(18,6) | Total shares held |
+| totalCost | NUMERIC(18,2) | Total cost basis |
+| totalProceeds | NUMERIC(18,2) | Total sale proceeds |
+| realizedPnl | NUMERIC(18,2) | Net gain/loss |
+| openDate | DATE | First buy date |
+| closeDate | DATE | Final sell date |
 | holdingPeriodDays | INTEGER | |
 
 **RecurringRule**
@@ -228,17 +260,17 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | type | TEXT | `income` · `expense` |
 | categoryId | TEXT | FK → Category |
 | accountId | TEXT | FK → Account |
-| amount | REAL | Per occurrence |
+| amount | NUMERIC(18,2) | Per occurrence |
 | currency | TEXT | `VND` · `SGD` |
 | frequency | TEXT | `monthly` · `quarterly` · `yearly` |
-| startDate | TEXT | |
-| endDate | TEXT | Nullable |
+| startDate | DATE | |
+| endDate | DATE | Nullable |
 | maxOccurrences | INTEGER | Nullable (alternative to endDate) |
 | occurrenceCount | INTEGER | Generated so far |
 | description | TEXT | e.g. "Monthly Salary" |
 | notes | TEXT | |
-| isActive | INTEGER | Can be paused |
-| createdAt | INTEGER | |
+| isActive | BOOLEAN | Can be paused |
+| createdAt | TIMESTAMP | |
 
 **Budget**
 
@@ -248,10 +280,10 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | userId | TEXT | FK → User |
 | categoryId | TEXT | FK → Category |
 | year | INTEGER | e.g. 2026 |
-| yearlyAmount | REAL | Annual total (VND) |
-| monthlyBaseLimit | REAL | yearlyAmount ÷ 12 |
-| isActive | INTEGER | |
-| createdAt | INTEGER | |
+| yearlyAmount | NUMERIC(18,2) | Annual total (VND) |
+| monthlyBaseLimit | NUMERIC(18,2) | yearlyAmount ÷ 12 |
+| isActive | BOOLEAN | |
+| createdAt | TIMESTAMP | |
 
 **BudgetMonthSnapshot**
 
@@ -261,13 +293,13 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | budgetId | TEXT | FK → Budget |
 | month | INTEGER | 1–12 |
 | year | INTEGER | |
-| baseLimit | REAL | From Budget |
-| rolloverAmount | REAL | Surplus/deficit from previous month |
-| effectiveLimit | REAL | baseLimit + rolloverAmount |
-| manualOverride | REAL | Nullable user override |
-| spent | REAL | Running total |
-| remaining | REAL | |
-| createdAt | INTEGER | |
+| baseLimit | NUMERIC(18,2) | From Budget |
+| rolloverAmount | NUMERIC(18,2) | Surplus/deficit from previous month |
+| effectiveLimit | NUMERIC(18,2) | baseLimit + rolloverAmount |
+| manualOverride | NUMERIC(18,2) | Nullable user override |
+| spent | NUMERIC(18,2) | Running total |
+| remaining | NUMERIC(18,2) | |
+| createdAt | TIMESTAMP | |
 
 **ExchangeRate**
 
@@ -276,9 +308,10 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | id | TEXT (ULID) | PK |
 | fromCurrency | TEXT | e.g. `SGD` |
 | toCurrency | TEXT | e.g. `VND` |
-| rate | REAL | |
-| date | TEXT | `YYYY-MM-DD` |
+| rate | NUMERIC(18,6) | High precision for currency conversion |
+| date | DATE | Rate date |
 | source | TEXT | `scraper` · `manual` |
+| createdAt | TIMESTAMP | |
 
 **PriceRefreshLog**
 
@@ -291,9 +324,9 @@ Expense categories (flat): Housing, Food, Transport, Utilities, Insurance, Healt
 | assetsRequested | INTEGER | |
 | assetsUpdated | INTEGER | |
 | assetsFailed | INTEGER | |
-| failureDetails | TEXT | JSON array `[{ symbol, error }]` |
-| startedAt | INTEGER | |
-| completedAt | INTEGER | |
+| failureDetails | JSONB | Array of `{ symbol, error }` objects |
+| startedAt | TIMESTAMP | |
+| completedAt | TIMESTAMP | |
 | status | TEXT | `success` · `partial` · `failed` |
 
 ---
@@ -454,15 +487,24 @@ Method: Server-side fetch + Cheerio HTML parsing.
 
 | Phase | Scope | Key Deliverables |
 |-------|-------|------------------|
-| **1. Foundation** | Project scaffolding | Next.js + Tailwind + shadcn/ui setup, SQLite + Drizzle schema & migrations, NextAuth (2 users), app shell with sidebar/nav/theme, seed categories & accounts |
-| **2. Income & Expenses** | Transaction tracking | Income/expense CRUD, on-behalf recording, category & account management UI, transaction list (filter/sort/search), monthly summaries |
-| **3. Recurring Rules** | Automation | Recurring rule CRUD (income & expense), auto-generation of transactions, manage page (list/edit/pause/history) |
-| **4. Portfolio Core** | Investment tracking | Asset registry, buy/sell recording (avg cost), holdings engine, closed positions history, dividend recording linked to income, capital gains auto-linking |
-| **5. Market Data** | Pricing engine | Vietnam & Singapore scrapers, FX scraper, on-demand + scheduled refresh, audit log, price history charts, manual entry, screenshot-assisted trade entry (AI) |
-| **6. Dashboard** | Wealth overview | Net worth engine, dashboard (KPIs/charts/activity/budgets), net worth trend, wealth composition, view toggle (my/partner/household) |
-| **7. Budgeting** | Spend control | Yearly budget CRUD, monthly snapshots with rollover, yearly rollover, monthly override, budget dashboard with progress bars, cash flow & savings rate |
-| **8. Reports** | Analytics | Asset Allocation + Portfolio Performance (priority), income/expense report, dividend summary, cash flow, financial health score, CSV/PDF export |
-| **9. Polish & Deploy** | Production readiness | Responsive UI, CSV import/export, SQLite backup/download, Dockerize, cloud deployment, performance & error handling |
+| **1. Foundation** | Project scaffolding | Next.js + Tailwind + shadcn/ui setup, Drizzle schema, NextAuth (2 users), app shell with sidebar/nav/theme, seed categories & accounts |
+| **2. Cloud Infrastructure** | Database & deployment | Migrate SQLite → Neon Postgres, rewrite schema with native PG types (boolean, timestamp, numeric, jsonb), deploy to Vercel, GitHub Actions CI/CD pipeline, Turborepo remote caching, environment configuration |
+| **3. Income & Expenses** | Transaction tracking | Income/expense CRUD, on-behalf recording, category & account management UI, transaction list (filter/sort/search), monthly summaries |
+| **4. Recurring Rules** | Automation | Recurring rule CRUD (income & expense), auto-generation of transactions, manage page (list/edit/pause/history) |
+| **5. Portfolio Core** | Investment tracking | Asset registry, buy/sell recording (avg cost), holdings engine, closed positions history, dividend recording linked to income, capital gains auto-linking |
+| **6. Market Data** | Pricing engine | Vietnam & Singapore scrapers, FX scraper, on-demand + scheduled refresh, audit log, price history charts, manual entry, screenshot-assisted trade entry (AI) |
+| **7. Dashboard** | Wealth overview | Net worth engine, dashboard (KPIs/charts/activity/budgets), net worth trend, wealth composition, view toggle (my/partner/household) |
+| **8. Budgeting** | Spend control | Yearly budget CRUD, monthly snapshots with rollover, yearly rollover, monthly override, budget dashboard with progress bars, cash flow & savings rate |
+| **9. Reports** | Analytics | Asset Allocation + Portfolio Performance (priority), income/expense report, dividend summary, cash flow, financial health score, CSV/PDF export |
+| **10. Polish & Optimize** | Production hardening | Responsive UI audit, CSV import/export, DB backup strategy, performance tuning, error handling, accessibility pass |
+
+### Phase Status
+
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 1. Foundation | **Complete** | App shell, auth, sidebar, theme, placeholder pages, Playwright e2e |
+| 2. Cloud Infrastructure | **In Progress** | Neon + Vercel + GitHub Actions |
+| 3–10 | Not started | |
 
 ---
 
@@ -474,3 +516,5 @@ Method: Server-side fetch + Cheerio HTML parsing.
 - Mobile app (React Native or PWA)
 - AI-powered financial advice & anomaly detection
 - Vietnamese banking API integration
+- Read replicas (Neon branching) for analytics workloads
+- Staging environment via Neon database branching (zero-copy clones)
