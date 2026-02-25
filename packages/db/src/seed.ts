@@ -1,11 +1,7 @@
-import { createClient } from "@libsql/client";
-import { drizzle } from "drizzle-orm/libsql";
 import { hash } from "bcryptjs";
 import { ulid } from "ulidx";
+import { db } from "./index";
 import * as schema from "./schema";
-
-const client = createClient({ url: process.env.DATABASE_URL || "file:./data/local.db" });
-const db = drizzle(client, { schema });
 
 const INCOME_CATEGORIES = [
   { name: "Salary", icon: "banknote" },
@@ -42,7 +38,6 @@ const EXPENSE_CATEGORIES = [
 
 async function seed() {
   console.log("Seeding database...");
-  const now = new Date();
 
   // ── Users ──────────────────────────────────────────────────────────────────
   const ownerHash = await hash("password123", 12);
@@ -59,7 +54,6 @@ async function seed() {
       passwordHash: ownerHash,
       role: "owner",
       theme: "light",
-      createdAt: now,
     },
     {
       id: memberId,
@@ -68,7 +62,6 @@ async function seed() {
       passwordHash: memberHash,
       role: "member",
       theme: "light",
-      createdAt: now,
     },
   ]);
   console.log("  Created 2 users (owner@family.local / member@family.local)");
@@ -102,7 +95,6 @@ async function seed() {
       type: "brokerage",
       currency: "VND",
       isActive: true,
-      createdAt: now,
     },
     {
       id: ulid(),
@@ -111,7 +103,6 @@ async function seed() {
       type: "bank",
       currency: "VND",
       isActive: true,
-      createdAt: now,
     },
     {
       id: ulid(),
@@ -120,7 +111,6 @@ async function seed() {
       type: "brokerage",
       currency: "SGD",
       isActive: true,
-      createdAt: now,
     },
     {
       id: ulid(),
@@ -129,7 +119,6 @@ async function seed() {
       type: "bank",
       currency: "SGD",
       isActive: true,
-      createdAt: now,
     },
     {
       id: ulid(),
@@ -138,7 +127,6 @@ async function seed() {
       type: "bank",
       currency: "VND",
       isActive: true,
-      createdAt: now,
     },
     {
       id: ulid(),
@@ -147,7 +135,6 @@ async function seed() {
       type: "cash",
       currency: "VND",
       isActive: true,
-      createdAt: now,
     },
   ]);
   console.log("  Created 6 sample accounts");
