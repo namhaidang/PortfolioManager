@@ -1,7 +1,21 @@
 import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
 
-const sql = neon(process.env.DATABASE_URL!);
+let _db: NeonHttpDatabase<typeof schema>;
 
-export const db = drizzle(sql, { schema });
+function getDb() {
+  if (!_db) {
+    _db = drizzle(neon(process.env.DATABASE_URL!), { schema });
+  }
+  return _db;
+}
+
+export const db: NeonHttpDatabase<typeof schema> = new Proxy(
+  {} as NeonHttpDatabase<typeof schema>,
+  {
+    get(_, prop) {
+      return (getDb() as any)[prop];
+    },
+  },
+);
