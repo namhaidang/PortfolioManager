@@ -28,7 +28,7 @@ npm workspaces monorepo with Turborepo for task orchestration.
 PortfolioManager/
 ├── .github/
 │   └── workflows/                  # CI/CD pipelines
-│       └── ci.yml                  # Lint → Type-check → Build → Deploy
+│       └── ci.yml                  # Build on push & PR
 ├── apps/
 │   └── web/                        # Next.js 16 application
 │       ├── src/
@@ -503,8 +503,20 @@ Method: Server-side fetch + Cheerio HTML parsing.
 | Phase | Status | Notes |
 |-------|--------|-------|
 | 1. Foundation | **Complete** | App shell, auth, sidebar, theme, placeholder pages, Playwright e2e |
-| 2. Cloud Infrastructure | **In Progress** | Neon + Vercel + GitHub Actions |
+| 2. Cloud Infrastructure | **Complete** | Neon Postgres (Singapore), Vercel deployment, GitHub Actions CI |
 | 3–10 | Not started | |
+
+### Phase 2 Changelog
+
+- Migrated database from SQLite (`@libsql/client`) to **Neon serverless Postgres** (`@neondatabase/serverless`)
+- Rewrote all 13 tables in `packages/db/src/schema.ts` from `sqliteTable` to `pgTable` with native Postgres types: `boolean`, `timestamp`, `date`, `numeric(precision, scale)`, `jsonb`
+- Switched Drizzle driver from `drizzle-orm/libsql` to `drizzle-orm/neon-http`
+- DB connection uses lazy proxy pattern in `packages/db/src/index.ts` to avoid build-time evaluation
+- Deployed to **Vercel** with `apps/web` as root directory, auto-deploys on push to `master`
+- Added **GitHub Actions** CI pipeline (`.github/workflows/ci.yml`) — runs `turbo run build` on every push and PR
+- Database hosted on Neon free tier, Singapore region (`aws-ap-southeast-1`)
+- Environment variables: `DATABASE_URL` (Neon connection string), `AUTH_SECRET` (NextAuth signing key)
+- Removed `data/` local SQLite directory, `@libsql/client` dependency, and `serverExternalPackages` config
 
 ---
 
