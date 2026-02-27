@@ -45,14 +45,16 @@ PortfolioManager/
 │       │   │   └── api/            # Route handlers
 │       │   ├── components/
 │       │   │   ├── ui/             # shadcn/ui primitives
+│       │   │   ├── transactions/   # TransactionPage, Form, Table, Filters, Summary
+│       │   │   ├── settings/       # AccountsSection
 │       │   │   ├── charts/
-│       │   │   ├── forms/
 │       │   │   └── layout/         # Shell, sidebar, nav
 │       │   ├── lib/
-│       │   │   ├── services/       # portfolio, cashflow, networth, budget
-│       │   │   ├── scrapers/       # vietnam, singapore, fx-rate
-│       │   │   ├── ocr/            # AI vision extraction
-│       │   │   └── scheduler/      # Cron jobs
+│       │   │   ├── services/       # cashflow (active), portfolio/networth/budget (future)
+│       │   │   ├── types.ts        # Shared Phase 3+ types
+│       │   │   ├── scrapers/       # vietnam, singapore, fx-rate (future)
+│       │   │   ├── ocr/            # AI vision extraction (future)
+│       │   │   └── scheduler/      # Cron jobs (future)
 │       │   └── hooks/
 │       ├── next.config.ts
 │       ├── proxy.ts
@@ -504,7 +506,19 @@ Method: Server-side fetch + Cheerio HTML parsing.
 |-------|--------|-------|
 | 1. Foundation | **Complete** | App shell, auth, sidebar, theme, placeholder pages, Playwright e2e |
 | 2. Cloud Infrastructure | **Complete** | Neon Postgres (Singapore), Vercel deployment, GitHub Actions CI |
-| 3–10 | Not started | |
+| 3. Income & Expenses | **Complete** | Transaction CRUD, on-behalf recording, account management, monthly summaries, dashboard KPIs |
+| 4–10 | Not started | |
+
+### Phase 3 Changelog
+
+- Added **6 API routes**: `GET /api/categories`, `GET/POST /api/accounts`, `PATCH /api/accounts/[id]`, `GET/POST /api/transactions`, `PATCH/DELETE /api/transactions/[id]`, `GET /api/transactions/summary`
+- Created **cashflow service** (`lib/services/cashflow.ts`) — single-query monthly summary with previous-month comparison via SQL `CASE WHEN`
+- Built **shared transaction components** (`components/transactions/`): `TransactionPage`, `TransactionForm` (calendar date picker, on-behalf user select, expense tags), `TransactionTable` (paginated, edit/delete), `TransactionFilters` (debounced search), `MonthlySummary`
+- Replaced Income and Expenses placeholder pages with full transaction list + form, server-side reference data fetching
+- Added **Account management** section to Settings — create, activate/deactivate accounts
+- Wired Dashboard Monthly Income / Expenses KPI cards to real data via `getMonthlySummary()`
+- Added shadcn/ui: `dialog`, `table`, `calendar`, `popover`, `badge`, `textarea`; deps: `react-day-picker`, `date-fns`
+- Added shared utilities: `parseNumeric()`, `formatDate()` in `@repo/shared`; `lib/types.ts` for Phase 3 types
 
 ### Phase 2 Changelog
 
@@ -517,6 +531,19 @@ Method: Server-side fetch + Cheerio HTML parsing.
 - Database hosted on Neon free tier, Singapore region (`aws-ap-southeast-1`)
 - Environment variables: `DATABASE_URL` (Neon connection string), `AUTH_SECRET` (NextAuth signing key)
 - Removed `data/` local SQLite directory, `@libsql/client` dependency, and `serverExternalPackages` config
+
+### Phase 3 Changelog
+
+- Added **6 API routes**: `GET /api/categories`, `GET/POST /api/accounts`, `PATCH /api/accounts/[id]`, `GET/POST /api/transactions`, `PATCH/DELETE /api/transactions/[id]`, `GET /api/transactions/summary`
+- Created **cashflow service** (`lib/services/cashflow.ts`) — single-query monthly summary aggregation with previous-month comparison using SQL `CASE WHEN` in Drizzle
+- Built **shared transaction components** (`components/transactions/`): `TransactionPage` (client orchestrator), `TransactionForm` (dialog with calendar date picker, on-behalf user select, category/account dropdowns, expense tags), `TransactionTable` (paginated data table with edit/delete), `TransactionFilters` (user/category/account/date/search with 300ms debounce), `MonthlySummary` (current vs previous month cards)
+- Replaced **Income** and **Expenses** placeholder pages with full transaction list + form, backed by server-side data fetching for dropdown reference data (users, categories, accounts)
+- Added **Account management** section to Settings (`components/settings/accounts-section.tsx`) — create new accounts, activate/deactivate existing ones
+- Wired **Dashboard** Monthly Income and Monthly Expenses KPI cards to real data via `getMonthlySummary()`
+- Added shadcn/ui primitives: `dialog`, `table`, `calendar`, `popover`, `badge`, `textarea`
+- Added dependencies: `react-day-picker` ^9.14.0, `date-fns` ^4.1.0
+- Added shared utilities: `parseNumeric()`, `formatDate()` in `@repo/shared`
+- Added `lib/types.ts` with shared Phase 3 types: `HouseholdUser`, `CategoryOption`, `AccountOption`, `TransactionRow`, `MonthlySummaryData`
 
 ---
 

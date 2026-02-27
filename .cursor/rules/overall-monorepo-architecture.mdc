@@ -1,0 +1,12 @@
+---
+description: Understanding the overall repository structure and major projects
+globs: 
+alwaysApply: false
+---
+This project is a monorepo with projects in apps/ and packages/.  It's primarily all node.js code so we use Turborepo.
+
+The primary frontend app is a Next.js project under apps/frontend.
+
+The primary backend app is an express project under apps/api.
+
+The details are specified in the ARCHITECTURE.md file in the root, so you can pull it if you need to use that context to make effect changes or find things.

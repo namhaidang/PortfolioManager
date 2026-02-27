@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Moon, Sun, User } from "lucide-react";
+import { AccountsSection } from "@/components/settings/accounts-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,6 +105,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <AccountsSection />
 
       <Card>
         <CardHeader>

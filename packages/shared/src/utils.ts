@@ -23,3 +23,14 @@ export function formatCurrency(amount: number, currency: "VND" | "SGD" = "VND"):
     currency: "SGD",
   }).format(amount);
 }
+
+export function parseNumeric(value: string | null | undefined): number {
+  if (!value) return 0;
+  const num = parseFloat(value);
+  return isNaN(num) ? 0 : num;
+}
+
+export function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}

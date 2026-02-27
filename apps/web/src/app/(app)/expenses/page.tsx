@@ -1,22 +1,31 @@
-import { TrendingDown } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { eq } from "drizzle-orm";
+import { auth } from "@/auth";
+import { db } from "@repo/db";
+import { users, categories, accounts } from "@repo/db/schema";
+import { TransactionPage } from "@/components/transactions/transaction-page";
 
-export default function ExpensesPage() {
+export default async function ExpensesPage() {
+  const session = await auth();
+
+  const [householdUsers, expenseCategories, activeAccounts] = await Promise.all([
+    db.select({ id: users.id, name: users.name }).from(users),
+    db
+      .select({ id: categories.id, name: categories.name, icon: categories.icon })
+      .from(categories)
+      .where(eq(categories.type, "expense"))
+      .orderBy(categories.sortOrder),
+    db.select().from(accounts).where(eq(accounts.isActive, true)),
+  ]);
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Expenses</h1>
-        <p className="text-muted-foreground">Track and control household spending</p>
-      </div>
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <TrendingDown className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Expense tracking coming in Phase 2</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Categorize expenses, set budgets, and track recurring bills
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <TransactionPage
+      type="expense"
+      title="Expenses"
+      description="Track and control household spending"
+      users={householdUsers}
+      categories={expenseCategories}
+      accounts={activeAccounts}
+      currentUserId={session!.user!.id}
+    />
   );
 }
