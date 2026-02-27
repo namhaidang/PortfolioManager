@@ -17,6 +17,16 @@ export default function SettingsPage() {
   const [name, setName] = useState(session?.user?.name ?? "");
   const [saving, setSaving] = useState(false);
 
+  async function handleSetTheme(next: "light" | "dark") {
+    setTheme(next);
+    await fetch("/api/user/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: next }),
+    });
+    await update({ theme: next });
+  }
+
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -77,7 +87,7 @@ export default function SettingsPage() {
           <div className="flex gap-3">
             <Button
               variant={theme === "light" ? "default" : "outline"}
-              onClick={() => setTheme("light")}
+              onClick={() => handleSetTheme("light")}
               className="flex items-center gap-2"
             >
               <Sun className="h-4 w-4" />
@@ -85,7 +95,7 @@ export default function SettingsPage() {
             </Button>
             <Button
               variant={theme === "dark" ? "default" : "outline"}
-              onClick={() => setTheme("dark")}
+              onClick={() => handleSetTheme("dark")}
               className="flex items-center gap-2"
             >
               <Moon className="h-4 w-4" />

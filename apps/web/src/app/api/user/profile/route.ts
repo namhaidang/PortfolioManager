@@ -10,12 +10,18 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { name } = await request.json();
-  if (!name || typeof name !== "string") {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  const { name, theme } = await request.json();
+
+  const updates: Partial<{ name: string; theme: "light" | "dark" }> = {};
+
+  if (name && typeof name === "string") updates.name = name.trim();
+  if (theme === "light" || theme === "dark") updates.theme = theme;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
   }
 
-  await db.update(users).set({ name: name.trim() }).where(eq(users.id, session.user.id));
+  await db.update(users).set(updates).where(eq(users.id, session.user.id));
 
   return NextResponse.json({ success: true });
 }
