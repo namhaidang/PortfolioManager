@@ -1,7 +1,7 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: { index: "src/entry-vercel.ts" },
   outDir: "api",
   format: ["esm"],
   target: "node20",
