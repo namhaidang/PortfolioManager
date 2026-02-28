@@ -1,8 +1,4 @@
 {
-  "buildCommand": "npm run build && mkdir -p public && echo '{\"ok\":true}' > public/index.json",
-  "installCommand": "npm install",
-  "framework": null,
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
-  ]
+  "buildCommand": "sh scripts/build-vercel.sh",
+  "installCommand": "npm install"
 }

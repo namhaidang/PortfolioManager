@@ -1,3 +1,4 @@
 api/
 dist/
 .env
+.vercel/
