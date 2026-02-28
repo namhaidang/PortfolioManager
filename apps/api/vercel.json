@@ -1,4 +1,4 @@
 {
-  "buildCommand": "sh scripts/build-vercel.sh",
-  "installCommand": "npm install"
+  "installCommand": "cd ../.. && npm install",
+  "buildCommand": "sh scripts/build-vercel.sh"
 }

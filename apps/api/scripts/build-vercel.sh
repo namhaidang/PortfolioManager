@@ -1,8 +1,17 @@
 #!/bin/sh
 set -e
 
+echo "=== Build starting ==="
+echo "Working directory: $(pwd)"
+echo "Node: $(node -v)"
+
+echo "=== Running tsup ==="
 npm run build
 
+echo "=== Bundle built ==="
+ls -la api/
+
+echo "=== Setting up Build Output API ==="
 mkdir -p .vercel/output/static .vercel/output/functions/api.func
 
 cp api/index.js .vercel/output/functions/api.func/index.mjs
@@ -24,5 +33,6 @@ cat > .vercel/output/config.json <<'EOF'
 }
 EOF
 
-echo "Build Output API structure ready"
-ls -la .vercel/output/functions/api.func/
+echo "=== Build Output API ready ==="
+ls -laR .vercel/output/
+echo "=== Done ==="
