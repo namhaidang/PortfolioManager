@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      DATABASE_URL: "postgresql://ci:ci@ep-ci.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-      JWT_SECRET: "ci-build-secret"
-      NEXT_PUBLIC_API_URL: "http://localhost:3001"
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
 
     steps:
       - uses: actions/checkout@v4
