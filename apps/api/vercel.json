@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build && mkdir -p public",
+  "buildCommand": "npm run build && mkdir -p public && echo '{\"ok\":true}' > public/index.json",
   "installCommand": "npm install",
   "framework": null,
   "rewrites": [
