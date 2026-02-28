@@ -16,7 +16,8 @@ jobs:
 
     env:
       DATABASE_URL: "postgresql://ci:ci@ep-ci.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-      AUTH_SECRET: "ci-build-secret"
+      JWT_SECRET: "ci-build-secret"
+      NEXT_PUBLIC_API_URL: "http://localhost:3001"
 
     steps:
       - uses: actions/checkout@v4

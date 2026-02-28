@@ -1,7 +1,7 @@
 import { and, eq, gte, lt, sql, inArray } from "drizzle-orm";
 import { db } from "@repo/db";
 import { transactions } from "@repo/db/schema";
-import type { MonthlySummaryData } from "@/lib/types";
+import type { MonthlySummaryData } from "@repo/shared/types";
 
 function monthBounds(month: number, year: number) {
   const start = `${year}-${String(month).padStart(2, "0")}-01`;

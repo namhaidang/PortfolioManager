@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@repo/db", "@repo/shared"],
+  transpilePackages: ["@repo/shared"],
 };
 
 export default nextConfig;

@@ -198,4 +198,55 @@
 
 ---
 
-*Last updated from ARCHITECTURE.md, schema, and app pages. Use this list to drive user-flow specs and implementation planning.*
+## E2E Test Coverage Mapping
+
+E2E tests live in `apps/web/e2e/` (Playwright). Mapping of tests to use cases:
+
+### phase1.spec.ts (Phase 1 — Foundation)
+
+| Test | Use Cases Covered |
+|------|-------------------|
+| 1. Login page - verify form | UC-AUTH-01 (form UI) |
+| 2. Invalid login - shows error message | UC-AUTH-01 (error path) |
+| 3. Valid login - redirects to dashboard | UC-AUTH-01, UC-AUTH-03, UC-DSH-01 |
+| 4. App shell - sidebar and user menu | UC-NAV-01, UC-NAV-02, UC-NAV-03 |
+| 5a. Navigate to Income page | UC-NAV-01 |
+| 5b. Navigate to Expenses page | UC-NAV-01 |
+| 5c. Navigate to Portfolio page | UC-NAV-01 |
+| 5d. Navigate to Settings page | UC-NAV-02 |
+| 6. Theme switching - Dark and Light | UC-SET-02 |
+| 7. Sign out - redirects to login | UC-AUTH-02, UC-NAV-03 |
+
+### phase3.spec.ts (Phase 3 — Income & Expenses)
+
+| Test | Use Cases Covered |
+|------|-------------------|
+| loads income page with summary cards and empty state | UC-TXN-01, UC-TXN-07 |
+| create income transaction via form | UC-INC-01 |
+| edit income transaction | UC-INC-03 |
+| delete income transaction | UC-INC-04 |
+| create expense with tags | UC-EXP-01 |
+| filter transactions by category | UC-TXN-03 |
+| filter transactions by user | UC-TXN-02 |
+| create new account in settings | UC-ACC-01 |
+| deactivate and reactivate account | UC-ACC-02, UC-ACC-03 |
+| dashboard shows real income and expense data | UC-DSH-01, UC-DSH-02 |
+
+### Coverage Gaps (Implemented Use Cases Without E2E)
+
+| Use Case | Gap |
+|----------|-----|
+| UC-SET-01 | Update display name — no test |
+| UC-SET-03 | View account info — not explicitly asserted |
+| UC-INC-02 | Record income on behalf of partner — no test |
+| UC-EXP-02 | Record expense on behalf of partner — no test |
+| UC-EXP-03 | Edit expense transaction — no test |
+| UC-EXP-04 | Delete expense transaction — no test |
+| UC-TXN-04 | Filter by account — no test |
+| UC-TXN-05 | Filter by date range — no test |
+| UC-TXN-06 | Search transactions — no test |
+| UC-AUTH-04 | Protected routes (redirect when unauthenticated) — no test |
+
+---
+
+*Last updated from ARCHITECTURE.md, schema, app pages, and e2e specs. Use this list to drive user-flow specs and implementation planning.*

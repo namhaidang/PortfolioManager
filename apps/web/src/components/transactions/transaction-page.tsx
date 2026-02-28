@@ -4,13 +4,15 @@ import { useState, useEffect, useCallback } from "react";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth-context";
+import { apiFetch } from "@/lib/api-client";
 import type {
   HouseholdUser,
   CategoryOption,
   AccountOption,
   TransactionRow,
   MonthlySummaryData,
-} from "@/lib/types";
+} from "@repo/shared/types";
 import { TransactionForm } from "./transaction-form";
 import { TransactionTable } from "./transaction-table";
 import { TransactionFilters, type Filters } from "./transaction-filters";
@@ -20,10 +22,6 @@ interface TransactionPageProps {
   type: "income" | "expense";
   title: string;
   description: string;
-  users: HouseholdUser[];
-  categories: CategoryOption[];
-  accounts: AccountOption[];
-  currentUserId: string;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -35,15 +33,11 @@ const EMPTY_FILTERS: Filters = {
   search: "",
 };
 
-export function TransactionPage({
-  type,
-  title,
-  description,
-  users,
-  categories,
-  accounts,
-  currentUserId,
-}: TransactionPageProps) {
+export function TransactionPage({ type, title, description }: TransactionPageProps) {
+  const { user } = useAuth();
+  const [users, setUsers] = useState<HouseholdUser[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -52,6 +46,20 @@ export function TransactionPage({
   const [formOpen, setFormOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionRow | null>(null);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+
+  useEffect(() => {
+    Promise.all([
+      apiFetch("/user").then((r) => r.json()),
+      apiFetch(`/categories?type=${type}`).then((r) => r.json()),
+      apiFetch("/accounts").then((r) => r.json()),
+    ])
+      .then(([u, c, a]) => {
+        setUsers(u);
+        setCategories(c);
+        setAccounts(a);
+      })
+      .catch(() => toast.error("Failed to load reference data"));
+  }, [type]);
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -64,7 +72,7 @@ export function TransactionPage({
     if (filters.search) params.set("search", filters.search);
 
     try {
-      const res = await fetch(`/api/transactions?${params}`);
+      const res = await apiFetch(`/transactions?${params}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
       setTransactions(data.data);
@@ -86,7 +94,7 @@ export function TransactionPage({
     });
     if (filters.userId) params.set("userId", filters.userId);
     try {
-      const res = await fetch(`/api/transactions/summary?${params}`);
+      const res = await apiFetch(`/transactions/summary?${params}`);
       if (!res.ok) throw new Error();
       setSummary(await res.json());
     } catch {
@@ -94,13 +102,8 @@ export function TransactionPage({
     }
   }, [filters.userId]);
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [fetchTransactions]);
-
-  useEffect(() => {
-    fetchSummary();
-  }, [fetchSummary]);
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   function handleEdit(tx: TransactionRow) {
     setEditingTx(tx);
@@ -109,7 +112,7 @@ export function TransactionPage({
 
   async function handleDelete(id: string) {
     if (!window.confirm("Delete this transaction? This cannot be undone.")) return;
-    const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+    const res = await apiFetch(`/transactions/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Transaction deleted");
       fetchTransactions();
@@ -146,10 +149,7 @@ export function TransactionPage({
         categories={categories}
         accounts={accounts}
         filters={filters}
-        onFiltersChange={(f) => {
-          setFilters(f);
-          setPage(1);
-        }}
+        onFiltersChange={(f) => { setFilters(f); setPage(1); }}
       />
 
       <TransactionTable
@@ -164,16 +164,13 @@ export function TransactionPage({
 
       <TransactionForm
         open={formOpen}
-        onOpenChange={(open) => {
-          setFormOpen(open);
-          if (!open) setEditingTx(null);
-        }}
+        onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingTx(null); }}
         type={type}
         transaction={editingTx}
         users={users}
         categories={categories}
         accounts={accounts}
-        currentUserId={currentUserId}
+        currentUserId={user?.id ?? ""}
         onSaved={handleSaved}
       />
     </div>

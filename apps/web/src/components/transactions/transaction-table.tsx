@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatCurrency, formatDate, parseNumeric } from "@/lib/utils";
-import type { TransactionRow } from "@/lib/types";
+import type { TransactionRow } from "@repo/shared/types";
 
 const PAGE_SIZE = 20;
 

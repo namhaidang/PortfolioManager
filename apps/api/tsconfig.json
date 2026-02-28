@@ -1,20 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "jsx": "react-jsx",
-    "plugins": [{ "name": "next" }],
+    "outDir": "./dist",
     "paths": {
       "@/*": ["./src/*"],
+      "@repo/db": ["../../packages/db/src/index.ts"],
+      "@repo/db/*": ["../../packages/db/src/*"],
       "@repo/shared": ["../../packages/shared/src/utils.ts"],
       "@repo/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
-  ],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules", "api", "dist"]
 }

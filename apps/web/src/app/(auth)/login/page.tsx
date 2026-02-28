@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function LoginPage() {
   const router = useRouter();
+  const { user, loading: authLoading, login } = useAuth();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!authLoading && user) router.replace("/dashboard");
+  }, [authLoading, user, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -20,19 +25,17 @@ export default function LoginPage() {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
-    const result = await signIn("credentials", {
-      email: formData.get("email") as string,
-      password: formData.get("password") as string,
-      redirect: false,
-    });
+    const result = await login(
+      formData.get("email") as string,
+      formData.get("password") as string,
+    );
 
     setLoading(false);
 
-    if (result?.error) {
-      setError("Invalid email or password");
+    if (!result.ok) {
+      setError(result.error || "Invalid email or password");
     } else {
       router.push("/dashboard");
-      router.refresh();
     }
   }
 

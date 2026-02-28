@@ -1,10 +1,11 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Moon, Sun, User } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { apiFetch } from "@/lib/api-client";
 import { AccountsSection } from "@/components/settings/accounts-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,32 +14,34 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Separator } from "@/components/ui/separator";
 
 export default function SettingsPage() {
-  const { data: session, update } = useSession();
+  const { user, updateToken } = useAuth();
   const { theme, setTheme } = useTheme();
-  const [name, setName] = useState(session?.user?.name ?? "");
+  const [name, setName] = useState(user?.name ?? "");
   const [saving, setSaving] = useState(false);
 
   async function handleSetTheme(next: "light" | "dark") {
     setTheme(next);
-    await fetch("/api/user/profile", {
+    const res = await apiFetch("/user/profile", {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ theme: next }),
     });
-    await update({ theme: next });
+    if (res.ok) {
+      const { token } = await res.json();
+      if (token) updateToken(token);
+    }
   }
 
   async function handleSaveName(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/user/profile", {
+      const res = await apiFetch("/user/profile", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),
       });
       if (res.ok) {
-        await update({ name });
+        const { token } = await res.json();
+        if (token) updateToken(token);
         toast.success("Name updated");
       } else {
         toast.error("Failed to update name");
@@ -115,12 +118,12 @@ export default function SettingsPage() {
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Email</span>
-            <span>{session?.user?.email}</span>
+            <span>{user?.email}</span>
           </div>
           <Separator />
           <div className="flex justify-between">
             <span className="text-muted-foreground">Role</span>
-            <span className="capitalize">{(session?.user as { role?: string })?.role}</span>
+            <span className="capitalize">{user?.role}</span>
           </div>
         </CardContent>
       </Card>

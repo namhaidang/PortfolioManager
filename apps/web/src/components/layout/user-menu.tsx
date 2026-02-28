@@ -1,6 +1,7 @@
 "use client";
 
-import { signOut } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { LogOut, User } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -19,12 +20,20 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ name, email }: UserMenuProps) {
+  const { logout } = useAuth();
+  const router = useRouter();
+
   const initials = name
     .split(" ")
     .map((n) => n[0])
     .join("")
     .toUpperCase()
     .slice(0, 2);
+
+  function handleSignOut() {
+    logout();
+    router.push("/login");
+  }
 
   return (
     <DropdownMenu>
@@ -47,7 +56,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+        <DropdownMenuItem onClick={handleSignOut}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>

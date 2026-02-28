@@ -11,7 +11,7 @@ export default function BudgetsPage() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <PiggyBank className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Budget planning coming in Phase 7</h3>
+          <h3 className="text-lg font-medium">Budget planning coming in Phase 8</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Set yearly budgets with monthly rollover and tracking
           </p>

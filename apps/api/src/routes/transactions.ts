@@ -1,30 +1,28 @@
-import { NextRequest, NextResponse } from "next/server";
+import { Hono } from "hono";
 import { eq, and, gte, lte, ilike, desc, asc, sql } from "drizzle-orm";
-import { auth } from "@/auth";
 import { db } from "@repo/db";
 import { transactions, categories, accounts, users } from "@repo/db/schema";
-import { newId } from "@/lib/utils";
+import { newId } from "@repo/shared";
+import type { AppEnv } from "../types.js";
+import { getMonthlySummary } from "../services/cashflow.js";
+
+const router = new Hono<AppEnv>();
 
 const PAGE_SIZE = 20;
 
-export async function GET(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const sp = request.nextUrl.searchParams;
-  const type = sp.get("type");
-  const userId = sp.get("userId");
-  const categoryId = sp.get("categoryId");
-  const accountId = sp.get("accountId");
-  const dateFrom = sp.get("dateFrom");
-  const dateTo = sp.get("dateTo");
-  const search = sp.get("search");
-  const sortBy = sp.get("sortBy") || "date";
-  const sortOrder = sp.get("sortOrder") || "desc";
-  const page = Math.max(1, parseInt(sp.get("page") || "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(sp.get("limit") || String(PAGE_SIZE), 10)));
+router.get("/", async (c) => {
+  const sp = c.req.query();
+  const type = sp.type;
+  const userId = sp.userId;
+  const categoryId = sp.categoryId;
+  const accountId = sp.accountId;
+  const dateFrom = sp.dateFrom;
+  const dateTo = sp.dateTo;
+  const search = sp.search;
+  const sortBy = sp.sortBy || "date";
+  const sortOrder = sp.sortOrder || "desc";
+  const page = Math.max(1, parseInt(sp.page || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(sp.limit || String(PAGE_SIZE), 10)));
 
   type TxType = "income" | "expense" | "buy" | "sell" | "dividend" | "transfer";
   const conditions = [];
@@ -78,27 +76,20 @@ export async function GET(request: NextRequest) {
       .where(where),
   ]);
 
-  return NextResponse.json({ data: rows, total: Number(countResult[0].count), page, limit });
-}
+  return c.json({ data: rows, total: Number(countResult[0].count), page, limit });
+});
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body = await request.json();
+router.post("/", async (c) => {
+  const user = c.get("user");
+  const body = await c.req.json();
   const { userId, accountId, type, categoryId, date, amount, notes, tags } = body;
 
   if (!userId || !accountId || !type || !categoryId || !date || amount == null) {
-    return NextResponse.json(
-      { error: "userId, accountId, type, categoryId, date, and amount are required" },
-      { status: 400 },
-    );
+    return c.json({ error: "userId, accountId, type, categoryId, date, and amount are required" }, 400);
   }
 
   if (type !== "income" && type !== "expense") {
-    return NextResponse.json({ error: "type must be income or expense" }, { status: 400 });
+    return c.json({ error: "type must be income or expense" }, 400);
   }
 
   const [row] = await db
@@ -106,7 +97,7 @@ export async function POST(request: Request) {
     .values({
       id: newId(),
       userId,
-      recordedByUserId: session.user.id,
+      recordedByUserId: user.id,
       accountId,
       type,
       categoryId,
@@ -117,5 +108,49 @@ export async function POST(request: Request) {
     })
     .returning();
 
-  return NextResponse.json(row, { status: 201 });
-}
+  return c.json(row, 201);
+});
+
+router.get("/summary", async (c) => {
+  const sp = c.req.query();
+  const now = new Date();
+  const month = parseInt(sp.month || String(now.getMonth() + 1), 10);
+  const year = parseInt(sp.year || String(now.getFullYear()), 10);
+  const userId = sp.userId || undefined;
+
+  const summary = await getMonthlySummary(month, year, userId);
+  return c.json(summary);
+});
+
+router.patch("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = await c.req.json();
+
+  const updates: Record<string, unknown> = {};
+  if (body.userId) updates.userId = body.userId;
+  if (body.accountId) updates.accountId = body.accountId;
+  if (body.categoryId) updates.categoryId = body.categoryId;
+  if (body.date) updates.date = body.date;
+  if (body.amount != null) updates.amount = String(body.amount);
+  if (body.notes !== undefined) updates.notes = body.notes || null;
+  if (body.tags !== undefined) updates.tags = body.tags || null;
+
+  if (Object.keys(updates).length === 0) {
+    return c.json({ error: "No valid fields to update" }, 400);
+  }
+
+  const [row] = await db.update(transactions).set(updates).where(eq(transactions.id, id)).returning();
+
+  if (!row) return c.json({ error: "Transaction not found" }, 404);
+  return c.json(row);
+});
+
+router.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  const [row] = await db.delete(transactions).where(eq(transactions.id, id)).returning();
+
+  if (!row) return c.json({ error: "Transaction not found" }, 404);
+  return c.json({ success: true });
+});
+
+export default router;

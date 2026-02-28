@@ -11,7 +11,7 @@ export default function ReportsPage() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Reports and analytics coming in Phase 8</h3>
+          <h3 className="text-lg font-medium">Reports and analytics coming in Phase 9</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Asset allocation, portfolio performance, and financial health
           </p>

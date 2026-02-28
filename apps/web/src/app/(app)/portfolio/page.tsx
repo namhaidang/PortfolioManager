@@ -11,7 +11,7 @@ export default function PortfolioPage() {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <Briefcase className="h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">Portfolio management coming in Phase 4</h3>
+          <h3 className="text-lg font-medium">Portfolio management coming in Phase 5</h3>
           <p className="text-sm text-muted-foreground mt-1">
             Track stocks, ETFs, bonds, gold, crypto, and real estate
           </p>

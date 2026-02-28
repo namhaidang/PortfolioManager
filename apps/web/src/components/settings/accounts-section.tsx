@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Building2 } from "lucide-react";
 import { toast } from "sonner";
+import { apiFetch } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,7 +56,7 @@ export function AccountsSection() {
   const [saving, setSaving] = useState(false);
 
   async function fetchAccounts() {
-    const res = await fetch("/api/accounts");
+    const res = await apiFetch("/accounts");
     setAccounts(await res.json());
     setLoading(false);
   }
@@ -68,9 +69,8 @@ export function AccountsSection() {
     e.preventDefault();
     setSaving(true);
     try {
-      const res = await fetch("/api/accounts", {
+      const res = await apiFetch("/accounts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, type, currency }),
       });
       if (res.ok) {
@@ -87,9 +87,8 @@ export function AccountsSection() {
   }
 
   async function toggleActive(account: Account) {
-    const res = await fetch(`/api/accounts/${account.id}`, {
+    const res = await apiFetch(`/accounts/${account.id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !account.isActive }),
     });
     if (res.ok) {

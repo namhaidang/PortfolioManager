@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { HouseholdUser, CategoryOption, AccountOption } from "@/lib/types";
+import type { HouseholdUser, CategoryOption, AccountOption } from "@repo/shared/types";
 
 export interface Filters {
   userId: string;

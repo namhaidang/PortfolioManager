@@ -4,7 +4,7 @@ import { TrendingUp, TrendingDown, ArrowUp, ArrowDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency } from "@/lib/utils";
-import type { MonthlySummaryData } from "@/lib/types";
+import type { MonthlySummaryData } from "@repo/shared/types";
 
 interface MonthlySummaryProps {
   type: "income" | "expense";

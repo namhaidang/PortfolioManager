@@ -24,7 +24,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
-import type { HouseholdUser, CategoryOption, AccountOption, TransactionRow } from "@/lib/types";
+import { apiFetch } from "@/lib/api-client";
+import type { HouseholdUser, CategoryOption, AccountOption, TransactionRow } from "@repo/shared/types";
 
 const EXPENSE_TAGS = ["needs", "wants", "tax-deductible"];
 
@@ -113,11 +114,10 @@ export function TransactionForm({
 
     try {
       const url = isEdit
-        ? `/api/transactions/${transaction!.id}`
-        : "/api/transactions";
-      const res = await fetch(url, {
+        ? `/transactions/${transaction!.id}`
+        : "/transactions";
+      const res = await apiFetch(url, {
         method: isEdit ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 

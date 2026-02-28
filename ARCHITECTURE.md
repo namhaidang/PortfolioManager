@@ -8,14 +8,15 @@
 
 | Layer | Choice |
 |-------|--------|
-| Framework | Next.js 16 (App Router) · TypeScript |
+| Frontend | Next.js 16 (App Router) · TypeScript |
+| API | Hono · TypeScript |
 | UI | Tailwind CSS · shadcn/ui · Recharts |
 | Database | PostgreSQL (Neon serverless) · Drizzle ORM |
-| Auth | NextAuth.js v5 (beta) — credentials provider |
+| Auth | JWT (signed, localStorage) — standalone API auth |
 | Scraping | Cheerio + server-side fetch |
 | AI Vision | OpenAI GPT-4o / Google Gemini (screenshot extraction) |
 | Scheduling | node-cron (in-process) |
-| Hosting | Vercel (Next.js) · Neon (Postgres, Singapore region) |
+| Hosting | Vercel (Next.js + Hono serverless) · Neon (Postgres, Singapore region) |
 | CI/CD | GitHub Actions · Turborepo remote caching |
 
 ---
@@ -30,19 +31,33 @@ PortfolioManager/
 │   └── workflows/                  # CI/CD pipelines
 │       └── ci.yml                  # Build on push & PR
 ├── apps/
-│   └── web/                        # Next.js 16 application
+│   ├── api/                        # Hono API server (Vercel serverless)
+│   │   ├── src/
+│   │   │   ├── index.ts            # Hono app entry, route registration
+│   │   │   ├── routes/             # Route handlers
+│   │   │   │   ├── auth.ts         # POST /auth/login
+│   │   │   │   ├── transactions.ts # CRUD + summary
+│   │   │   │   ├── accounts.ts     # CRUD
+│   │   │   │   ├── categories.ts   # List
+│   │   │   │   └── user.ts         # Profile update
+│   │   │   ├── middleware/
+│   │   │   │   └── auth.ts         # JWT verification middleware
+│   │   │   └── services/           # Business logic
+│   │   │       └── cashflow.ts     # Monthly summary aggregation
+│   │   ├── package.json
+│   │   └── tsconfig.json
+│   └── web/                        # Next.js 16 frontend (pure UI, no DB access)
 │       ├── src/
 │       │   ├── app/
-│       │   │   ├── (auth)/         # Login & registration
-│       │   │   ├── (app)/          # Authenticated shell
-│       │   │   │   ├── dashboard/
-│       │   │   │   ├── income/
-│       │   │   │   ├── expenses/
-│       │   │   │   ├── portfolio/
-│       │   │   │   ├── budgets/
-│       │   │   │   ├── reports/
-│       │   │   │   └── settings/
-│       │   │   └── api/            # Route handlers
+│       │   │   ├── (auth)/         # Login page
+│       │   │   └── (app)/          # Authenticated shell
+│       │   │       ├── dashboard/
+│       │   │       ├── income/
+│       │   │       ├── expenses/
+│       │   │       ├── portfolio/
+│       │   │       ├── budgets/
+│       │   │       ├── reports/
+│       │   │       └── settings/
 │       │   ├── components/
 │       │   │   ├── ui/             # shadcn/ui primitives
 │       │   │   ├── transactions/   # TransactionPage, Form, Table, Filters, Summary
@@ -50,17 +65,14 @@ PortfolioManager/
 │       │   │   ├── charts/
 │       │   │   └── layout/         # Shell, sidebar, nav
 │       │   ├── lib/
-│       │   │   ├── services/       # cashflow (active), portfolio/networth/budget (future)
-│       │   │   ├── types.ts        # Shared Phase 3+ types
-│       │   │   ├── scrapers/       # vietnam, singapore, fx-rate (future)
-│       │   │   ├── ocr/            # AI vision extraction (future)
-│       │   │   └── scheduler/      # Cron jobs (future)
+│       │   │   ├── api-client.ts   # Typed fetch wrapper (attaches JWT, handles errors)
+│       │   │   ├── auth-context.tsx # AuthProvider, useAuth() hook
+│       │   │   └── utils.ts        # Re-exports from @repo/shared
 │       │   └── hooks/
 │       ├── next.config.ts
-│       ├── proxy.ts
 │       └── package.json
 ├── packages/
-│   ├── db/                         # Database layer (shared)
+│   ├── db/                         # Database layer (used by apps/api only)
 │   │   ├── src/
 │   │   │   ├── schema.ts           # Drizzle 13-table Postgres schema
 │   │   │   ├── index.ts            # Neon DB client
@@ -71,22 +83,23 @@ PortfolioManager/
 │   └── shared/                     # Shared utilities & types
 │       ├── src/
 │       │   ├── utils.ts            # cn(), newId(), formatCurrency()
-│       │   └── types.ts            # next-auth type augmentations
+│       │   └── types.ts            # Domain types (Currency, AccountType, etc.)
 │       └── package.json
 ├── package.json                    # Workspace root
 ├── turbo.json                      # Turborepo task config
 └── ARCHITECTURE.md
 ```
 
-Internal packages use `@repo/db` and `@repo/shared` import aliases.
+Internal packages use `@repo/db` and `@repo/shared` import aliases. `@repo/db` is consumed only by `apps/api`; `@repo/shared` is consumed by both apps.
 
 **Environment variables** (set in Vercel dashboard and local `.env`):
 
-| Variable | Where | Purpose |
-|----------|-------|---------|
-| `DATABASE_URL` | Neon console | Postgres connection string |
-| `AUTH_SECRET` | Generated | NextAuth.js session signing |
-| `AUTH_URL` | Vercel domain | NextAuth.js callback base URL |
+| Variable | App | Purpose |
+|----------|-----|---------|
+| `DATABASE_URL` | `apps/api` | Neon Postgres connection string |
+| `JWT_SECRET` | `apps/api` | JWT signing key |
+| `CORS_ORIGIN` | `apps/api` | Allowed frontend origin(s) |
+| `NEXT_PUBLIC_API_URL` | `apps/web` | API base URL (e.g. `https://portfolio-api.vercel.app`) |
 
 ---
 
@@ -97,6 +110,17 @@ Internal packages use `@repo/db` and `@repo/shared` import aliases.
 - **Views**: Dashboard supports **My View**, **Partner View**, and **Household** (combined).
 - Either user can record transactions on behalf of the other.
 - Theme preference per user (light default, dark optional) in Settings.
+
+### Auth Architecture
+
+The API server owns authentication. No NextAuth — pure JWT flow.
+
+1. Frontend `POST`s credentials to `API_URL/auth/login`.
+2. API verifies password (bcrypt), returns signed JWT (`{ id, name, email, role, theme }`, HS256, long-lived).
+3. Frontend stores JWT in `localStorage`, includes it as `Authorization: Bearer <token>` on all API calls.
+4. API middleware verifies JWT signature + expiry on every protected route.
+5. Frontend `AuthProvider` context reads/decodes the JWT, provides `useAuth()` hook, redirects to `/login` if missing/expired.
+6. Logout = clear `localStorage` + redirect.
 
 ---
 
@@ -492,13 +516,14 @@ Method: Server-side fetch + Cheerio HTML parsing.
 | **1. Foundation** | Project scaffolding | Next.js + Tailwind + shadcn/ui setup, Drizzle schema, NextAuth (2 users), app shell with sidebar/nav/theme, seed categories & accounts |
 | **2. Cloud Infrastructure** | Database & deployment | Migrate SQLite → Neon Postgres, rewrite schema with native PG types (boolean, timestamp, numeric, jsonb), deploy to Vercel, GitHub Actions CI/CD pipeline, Turborepo remote caching, environment configuration |
 | **3. Income & Expenses** | Transaction tracking | Income/expense CRUD, on-behalf recording, category & account management UI, transaction list (filter/sort/search), monthly summaries |
-| **4. Recurring Rules** | Automation | Recurring rule CRUD (income & expense), auto-generation of transactions, manage page (list/edit/pause/history) |
-| **5. Portfolio Core** | Investment tracking | Asset registry, buy/sell recording (avg cost), holdings engine, closed positions history, dividend recording linked to income, capital gains auto-linking |
-| **6. Market Data** | Pricing engine | Vietnam & Singapore scrapers, FX scraper, on-demand + scheduled refresh, audit log, price history charts, manual entry, screenshot-assisted trade entry (AI) |
-| **7. Dashboard** | Wealth overview | Net worth engine, dashboard (KPIs/charts/activity/budgets), net worth trend, wealth composition, view toggle (my/partner/household) |
-| **8. Budgeting** | Spend control | Yearly budget CRUD, monthly snapshots with rollover, yearly rollover, monthly override, budget dashboard with progress bars, cash flow & savings rate |
-| **9. Reports** | Analytics | Asset Allocation + Portfolio Performance (priority), income/expense report, dividend summary, cash flow, financial health score, CSV/PDF export |
-| **10. Polish & Optimize** | Production hardening | Responsive UI audit, CSV import/export, DB backup strategy, performance tuning, error handling, accessibility pass |
+| **4. API Extraction** | Frontend/backend split | Extract API into standalone Hono server (`apps/api`), replace NextAuth with JWT auth, convert web app to pure frontend with no DB access, second Vercel project, CORS, CI/CD update |
+| **5. Recurring Rules** | Automation | Recurring rule CRUD (income & expense), auto-generation of transactions, manage page (list/edit/pause/history) |
+| **6. Portfolio Core** | Investment tracking | Asset registry, buy/sell recording (avg cost), holdings engine, closed positions history, dividend recording linked to income, capital gains auto-linking |
+| **7. Market Data** | Pricing engine | Vietnam & Singapore scrapers, FX scraper, on-demand + scheduled refresh, audit log, price history charts, manual entry, screenshot-assisted trade entry (AI) |
+| **8. Dashboard** | Wealth overview | Net worth engine, dashboard (KPIs/charts/activity/budgets), net worth trend, wealth composition, view toggle (my/partner/household) |
+| **9. Budgeting** | Spend control | Yearly budget CRUD, monthly snapshots with rollover, yearly rollover, monthly override, budget dashboard with progress bars, cash flow & savings rate |
+| **10. Reports** | Analytics | Asset Allocation + Portfolio Performance (priority), income/expense report, dividend summary, cash flow, financial health score, CSV/PDF export |
+| **11. Polish & Optimize** | Production hardening | Responsive UI audit, CSV import/export, DB backup strategy, performance tuning, error handling, accessibility pass |
 
 ### Phase Status
 
@@ -507,18 +532,8 @@ Method: Server-side fetch + Cheerio HTML parsing.
 | 1. Foundation | **Complete** | App shell, auth, sidebar, theme, placeholder pages, Playwright e2e |
 | 2. Cloud Infrastructure | **Complete** | Neon Postgres (Singapore), Vercel deployment, GitHub Actions CI |
 | 3. Income & Expenses | **Complete** | Transaction CRUD, on-behalf recording, account management, monthly summaries, dashboard KPIs |
-| 4–10 | Not started | |
-
-### Phase 3 Changelog
-
-- Added **6 API routes**: `GET /api/categories`, `GET/POST /api/accounts`, `PATCH /api/accounts/[id]`, `GET/POST /api/transactions`, `PATCH/DELETE /api/transactions/[id]`, `GET /api/transactions/summary`
-- Created **cashflow service** (`lib/services/cashflow.ts`) — single-query monthly summary with previous-month comparison via SQL `CASE WHEN`
-- Built **shared transaction components** (`components/transactions/`): `TransactionPage`, `TransactionForm` (calendar date picker, on-behalf user select, expense tags), `TransactionTable` (paginated, edit/delete), `TransactionFilters` (debounced search), `MonthlySummary`
-- Replaced Income and Expenses placeholder pages with full transaction list + form, server-side reference data fetching
-- Added **Account management** section to Settings — create, activate/deactivate accounts
-- Wired Dashboard Monthly Income / Expenses KPI cards to real data via `getMonthlySummary()`
-- Added shadcn/ui: `dialog`, `table`, `calendar`, `popover`, `badge`, `textarea`; deps: `react-day-picker`, `date-fns`
-- Added shared utilities: `parseNumeric()`, `formatDate()` in `@repo/shared`; `lib/types.ts` for Phase 3 types
+| 4. API Extraction | Not started | Next up — see detailed plan below |
+| 5–11 | Not started | |
 
 ### Phase 2 Changelog
 
@@ -545,6 +560,81 @@ Method: Server-side fetch + Cheerio HTML parsing.
 - Added shared utilities: `parseNumeric()`, `formatDate()` in `@repo/shared`
 - Added `lib/types.ts` with shared Phase 3 types: `HouseholdUser`, `CategoryOption`, `AccountOption`, `TransactionRow`, `MonthlySummaryData`
 
+### Phase 4 Plan — API Extraction & Auth Refactor
+
+**Goal**: Split the monolith into a standalone Hono API (`apps/api`) and a pure frontend (`apps/web`), enabling multi-client support (web, future mobile).
+
+#### Step 1 — Create `apps/api` (Hono on Vercel serverless)
+
+- Scaffold `apps/api` with Hono, TypeScript, `@repo/db`, `@repo/shared`
+- Configure `tsconfig.json`, `package.json` (with `build` script), `vercel.json` if needed
+- Wire into Turborepo: update `turbo.json` outputs to include `dist/**`
+- Add CORS middleware (reads `CORS_ORIGIN` env var)
+
+#### Step 2 — Implement standalone JWT auth on the API
+
+- `POST /auth/login` — validate email + password (bcrypt), return signed JWT (HS256, `jsonwebtoken`)
+- `GET /auth/me` — return current user from JWT (for token validation / user info refresh)
+- Auth middleware: verify JWT on all routes except `/auth/login`, extract user into request context
+- JWT payload: `{ sub: userId, name, email, role, theme, iat, exp }`
+
+#### Step 3 — Migrate route handlers from Next.js to Hono
+
+| Current (Next.js) | New (Hono) | Notes |
+|--------------------|------------|-------|
+| `GET /api/categories` | `GET /categories` | Direct port |
+| `GET/POST /api/accounts` | `GET/POST /accounts` | Direct port |
+| `PATCH /api/accounts/[id]` | `PATCH /accounts/:id` | Direct port |
+| `GET/POST /api/transactions` | `GET/POST /transactions` | Direct port |
+| `PATCH/DELETE /api/transactions/[id]` | `PATCH/DELETE /transactions/:id` | Direct port |
+| `GET /api/transactions/summary` | `GET /transactions/summary` | Direct port |
+| `PATCH /api/user/profile` | `PATCH /user/profile` | Returns updated JWT |
+
+- Move `lib/services/cashflow.ts` to `apps/api/src/services/`
+- Move `lib/types.ts` domain types to `@repo/shared/types`
+
+#### Step 4 — Refactor `apps/web` to pure frontend
+
+- **Remove** `@repo/db` dependency — no direct database access from frontend
+- **Remove** `next-auth` — delete `src/auth.ts` and all NextAuth imports
+- **Remove** `src/app/api/` directory — no more Next.js API routes
+- **Create** `lib/auth-context.tsx` — `AuthProvider` + `useAuth()` hook (reads JWT from localStorage, decodes for user info, redirects to `/login` on missing/expired token)
+- **Create** `lib/api-client.ts` — typed fetch wrapper that auto-attaches `Authorization: Bearer` header and handles 401 → logout
+- **Convert** server-component pages that queried DB directly (`expenses/page.tsx`, `income/page.tsx`, `dashboard/page.tsx`) to client-side data fetching via `api-client`
+- **Convert** `(app)/layout.tsx` from server-side `auth()` to client-side `AuthProvider` guard
+- **Update** `login/page.tsx` to call `POST API_URL/auth/login` and store JWT
+- **Update** `user-menu.tsx` to clear localStorage on sign-out
+- **Update** `settings/page.tsx` to use `useAuth()` instead of `useSession()`
+
+#### Step 5 — Update CI/CD & deployment
+
+**GitHub Actions** (`ci.yml`):
+- Replace env vars: `AUTH_SECRET` → `JWT_SECRET`, add `NEXT_PUBLIC_API_URL=http://localhost:3001`
+- No structural changes — `npx turbo run build` already discovers all workspace apps
+
+**Vercel**:
+- Create second Vercel project for `apps/api` (root directory: `apps/api`)
+- Existing project (`apps/web`) keeps root directory `apps/web`
+- Each project gets filtered build: `turbo run build --filter=@repo/web` / `--filter=@repo/api`
+- Update env vars per project (see Environment variables table above)
+- Both projects auto-deploy on push to `master`
+
+**Local dev**:
+- `turbo run dev` starts both apps: web on `:3000`, API on `:3001`
+- `.env` in `apps/api`: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGIN=http://localhost:3000`
+- `.env` in `apps/web`: `NEXT_PUBLIC_API_URL=http://localhost:3001`
+
+#### Step 6 — Verify & clean up
+
+- Run full e2e test suite against the new architecture
+- Remove dead code: `next-auth` types in `@repo/shared/types.ts`, unused proxy files
+- Update `.env.example` with new variable layout
+- Verify Vercel preview deployments work for both projects on PRs
+
+#### Confidence: 8/10
+
+Lowest-confidence area is the auth provider UX (avoiding flash of unauthenticated content, token expiry handling). Everything else is mechanical migration. The codebase is small (~30 source files) and patterns are consistent.
+
 ---
 
 ## 9. Future Considerations
@@ -552,7 +642,7 @@ Method: Server-side fetch + Cheerio HTML parsing.
 - Loan & liability tracking with amortization
 - Goal-based savings (retirement, education, travel)
 - Bank statement import (PDF/CSV parsing)
-- Mobile app (React Native or PWA)
+- Mobile app (React Native or PWA) — enabled by Phase 4 API extraction
 - AI-powered financial advice & anomaly detection
 - Vietnamese banking API integration
 - Read replicas (Neon branching) for analytics workloads
