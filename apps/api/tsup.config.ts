@@ -6,5 +6,5 @@ export default defineConfig({
   format: ["esm"],
   target: "node20",
   clean: true,
-  noExternal: [/@repo\/.*/],
+  noExternal: [/.*/],
 });
