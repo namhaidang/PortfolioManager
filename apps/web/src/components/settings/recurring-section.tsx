@@ -328,7 +328,7 @@ export function RecurringSection() {
                     setCategoryId("");
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="recurring-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -341,7 +341,7 @@ export function RecurringSection() {
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={categoryId} onValueChange={setCategoryId} disabled={loading}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="recurring-category">
                     <SelectValue placeholder={loading ? "Loading..." : "Select category"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -381,7 +381,7 @@ export function RecurringSection() {
               <div className="space-y-2">
                 <Label>Account</Label>
                 <Select value={accountId} onValueChange={setAccountId} disabled={loading}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="recurring-account">
                     <SelectValue placeholder={loading ? "Loading..." : "Select account"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -397,7 +397,7 @@ export function RecurringSection() {
               <div className="space-y-2">
                 <Label>Frequency</Label>
                 <Select value={frequency} onValueChange={setFrequency}>
-                  <SelectTrigger>
+                  <SelectTrigger data-testid="recurring-frequency">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>

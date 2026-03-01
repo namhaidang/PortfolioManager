@@ -112,6 +112,72 @@ export async function deleteAccountViaAPI(id: string): Promise<void> {
   });
 }
 
+export async function createRecurringRuleViaAPI(
+  overrides?: Partial<{
+    type: "income" | "expense";
+    amount: number;
+    frequency: string;
+    description: string;
+  }>,
+): Promise<{ id: string }> {
+  const token = await getApiToken();
+  const headers = { Authorization: `Bearer ${token}` };
+
+  const [meRes, catRes, acctRes] = await Promise.all([
+    fetch(`${API_URL}/auth/me`, { headers }),
+    fetch(`${API_URL}/categories?type=${overrides?.type ?? "income"}`, { headers }),
+    fetch(`${API_URL}/accounts`, { headers }),
+  ]);
+
+  if (!meRes.ok || !catRes.ok || !acctRes.ok) {
+    throw new Error(
+      `API setup failed: me=${meRes.status} cat=${catRes.status} acct=${acctRes.status}`,
+    );
+  }
+
+  const user = (await meRes.json()) as { id: string };
+  const categories = (await catRes.json()) as { id: string }[];
+  const accounts = (await acctRes.json()) as { id: string }[];
+
+  const res = await fetch(`${API_URL}/recurring-rules`, {
+    method: "POST",
+    headers: { ...headers, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: user.id,
+      type: overrides?.type ?? "income",
+      categoryId: categories[0].id,
+      accountId: accounts[0].id,
+      amount: overrides?.amount ?? 5_000_000,
+      frequency: overrides?.frequency ?? "monthly",
+      startDate: new Date().toISOString().split("T")[0],
+      description: overrides?.description ?? `E2E rule ${Date.now()}`,
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Create recurring rule failed: ${res.status}`);
+  return (await res.json()) as { id: string };
+}
+
+export async function findRecurringRuleByDescriptionViaAPI(
+  description: string,
+): Promise<{ id: string } | null> {
+  const token = await getApiToken();
+  const res = await fetch(`${API_URL}/recurring-rules`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  const rules = (await res.json()) as { id: string; description: string }[];
+  return rules.find((r) => r.description === description) ?? null;
+}
+
+export async function deleteRecurringRuleViaAPI(id: string): Promise<void> {
+  const token = await getApiToken();
+  await fetch(`${API_URL}/recurring-rules/${id}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function findAccountByNameViaAPI(
   name: string,
 ): Promise<{ id: string } | null> {
