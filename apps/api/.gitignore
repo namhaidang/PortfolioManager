@@ -1,4 +1,4 @@
-api/
+.build/
 dist/
 .env
 .vercel/

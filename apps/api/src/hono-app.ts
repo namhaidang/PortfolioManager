@@ -27,6 +27,10 @@ app.route("/accounts", accountRoutes);
 app.route("/categories", categoryRoutes);
 app.route("/user", userRoutes);
 
-app.get("/health", (c) => c.json({ status: "ok" }));
+app.get("/health", (c) => {
+  console.log("[health] hit /health endpoint");
+  return c.json({ status: "ok", debug: true });
+});
 
+console.log("[hono-app] app created, typeof app.fetch:", typeof app.fetch);
 export default app;

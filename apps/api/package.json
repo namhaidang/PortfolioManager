@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsup src/dev.ts --outDir dist --format esm --watch --onSuccess \"node --env-file=.env dist/dev.js\"",
     "build": "tsup",
-    "start": "node api/index.js",
+    "start": "node .build/index.js",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

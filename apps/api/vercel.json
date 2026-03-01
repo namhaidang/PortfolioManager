@@ -1,7 +1,4 @@
 {
   "installCommand": "cd ../.. && npm install",
-  "buildCommand": "npm run build",
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/api" }
-  ]
+  "buildCommand": "npm run build && echo '[vercel-build] .build contents:' && ls -la .build/"
 }
