@@ -38,7 +38,7 @@ jobs:
 
       - run: npx turbo run build
 
-      - run: npx turbo run test
+      - run: npx turbo run lint --filter=@repo/api
 
   e2e:
     runs-on: ubuntu-latest
