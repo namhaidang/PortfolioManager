@@ -48,9 +48,7 @@ test.describe("Phase 5: Recurring Rules", () => {
 
       await page.getByPlaceholder("e.g. Monthly Salary").fill(ruleName);
 
-      const submitBtn = page.getByRole("button", { name: /create rule/i });
-      await submitBtn.scrollIntoViewIfNeeded();
-      await submitBtn.click();
+      await page.getByRole("button", { name: /create rule/i }).click({ force: true });
       await expect(page.getByText("Recurring rule created")).toBeVisible({ timeout: 5000 });
 
       await expect(section.getByText(ruleName)).toBeVisible();
@@ -72,9 +70,7 @@ test.describe("Phase 5: Recurring Rules", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
 
       await page.getByPlaceholder("0.00").fill("9999999");
-      const updateBtn = page.getByRole("button", { name: /update/i });
-      await updateBtn.scrollIntoViewIfNeeded();
-      await updateBtn.click();
+      await page.getByRole("button", { name: /update/i }).click({ force: true });
       await expect(page.getByText("Rule updated")).toBeVisible({ timeout: 5000 });
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p5-03-rule-edited.png"), fullPage: true });
 

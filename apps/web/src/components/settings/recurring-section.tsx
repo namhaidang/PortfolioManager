@@ -294,7 +294,7 @@ export function RecurringSection() {
         )}
 
         <Dialog open={formOpen} onOpenChange={(open) => { setFormOpen(open); if (!open) setEditingRule(null); }}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editingRule ? "Edit" : "Add"} Recurring Rule</DialogTitle>
             </DialogHeader>
