@@ -17,6 +17,7 @@
 | AI Vision | OpenAI GPT-4o / Google Gemini (screenshot extraction) |
 | Scheduling | node-cron (in-process) |
 | Hosting | Vercel (Next.js + Hono serverless) · Neon (Postgres, Singapore region) |
+| Testing | Vitest (API integration) · Playwright (E2E) |
 | CI/CD | GitHub Actions · Turborepo remote caching |
 
 ---
@@ -509,7 +510,87 @@ Method: Server-side fetch + Cheerio HTML parsing.
 
 ---
 
-## 8. Implementation Phases
+## 8. Testing
+
+Two testing layers: **API integration tests** (Vitest, in-process) and **browser E2E tests** (Playwright, full-stack).
+
+### Structure
+
+```
+apps/
+├── api/__tests__/              # API integration tests (Vitest)
+│   ├── helpers.ts              # Shared: getTestToken(), authHeaders(), app instance
+│   ├── health.test.ts          # GET /health
+│   ├── auth.test.ts            # POST /auth/login, GET /auth/me
+│   ├── categories.test.ts      # GET /categories
+│   ├── accounts.test.ts        # CRUD /accounts
+│   ├── transactions.test.ts    # CRUD /transactions, GET /transactions/summary
+│   └── user.test.ts            # GET /user, PATCH /user/profile
+├── api/vitest.config.ts        # Vitest config (custom .env loader, timeouts)
+└── web/e2e/                    # Browser E2E tests (Playwright)
+    ├── helpers.ts              # login(), API helpers for test data setup/teardown
+    ├── phase1.spec.ts          # Login, navigation, theme, sign-out (10 tests)
+    ├── phase3.spec.ts          # Income/expense CRUD, filters, accounts, dashboard KPIs (10 tests)
+    └── phase4.spec.ts          # JWT lifecycle, API connectivity, profile updates (9 tests)
+```
+
+### API Integration Tests (Vitest)
+
+- **35 tests** across 6 test files covering all API endpoints
+- Uses Hono's `app.request()` for in-process testing — no HTTP server needed
+- Connects to real Neon database (requires `DATABASE_URL` and `JWT_SECRET` in `.env`)
+- Shared `getTestToken()` caches a JWT from `/auth/login` for authenticated requests
+- Run: `npm run test:api` (root) or `vitest run` (from `apps/api`)
+
+### E2E Tests (Playwright)
+
+- **29 tests** across 3 spec files testing full browser flows
+- Playwright auto-starts both servers via `webServer` config (API on `:3001`, frontend on `:3000`)
+- `data-testid` attributes on key UI elements for stable selectors (select-category, select-account, edit-transaction, delete-transaction, filter-user, filter-category, accounts-section, kpi-net-worth, user-menu-trigger)
+- **Test isolation**: dependent tests use API-level setup (`createTransactionViaAPI`) instead of relying on prior test state
+- **Per-test cleanup**: each test cleans up its created data via API helpers (`deleteTransactionViaAPI`, `deleteAccountViaAPI`, `findLatestTransactionViaAPI`, `findAccountByNameViaAPI`)
+- Unique timestamped names for accounts to prevent cross-test interference
+- CI: `retries: 1` with trace on first retry; locally: `retries: 0`
+- Run: `npm run e2e` (root)
+
+### CI/CD Integration
+
+```
+GitHub Actions CI workflow (.github/workflows/ci.yml)
+
+┌─────────────────────────────────────────────────┐
+│  Triggers: push (master), PR, workflow_dispatch  │
+└──────────────────────┬──────────────────────────┘
+                       │
+              ┌────────▼────────┐
+              │   ci (always)   │  build + type-check (tsc --noEmit)
+              │   ~40s          │
+              └────────┬────────┘
+                       │
+              ┌────────▼────────┐
+              │  e2e (optional) │  Playwright full-stack browser tests
+              │  ~2.5 min       │  Runs on: PRs, manual dispatch
+              └─────────────────┘
+```
+
+- **`ci` job**: runs on every push and PR — `npm ci` → `turbo build` → `turbo lint --filter=@repo/api`
+- **`e2e` job**: runs on PRs (automatic) and `workflow_dispatch` with `run_e2e=true` (manual) — installs Chromium, creates `.env` from secrets, starts both servers, runs Playwright
+- Manual trigger: `gh workflow run CI --field run_e2e=true --ref master`
+- Failure artifacts: screenshots + traces uploaded to GitHub (7-day retention)
+- API integration tests run locally only (require seeded database)
+
+### Running Tests
+
+| Command | Scope | Where |
+|---------|-------|-------|
+| `npm run test:api` | API integration (Vitest) | Root |
+| `npm run e2e` | Browser E2E (Playwright) | Root |
+| `vitest run` | API integration | `apps/api` |
+| `npx playwright test` | Browser E2E | `apps/web` |
+
+---
+
+## 9. Implementation Phases
 
 | Phase | Scope | Key Deliverables |
 |-------|-------|------------------|
@@ -532,7 +613,7 @@ Method: Server-side fetch + Cheerio HTML parsing.
 | 1. Foundation | **Complete** | App shell, auth, sidebar, theme, placeholder pages, Playwright e2e |
 | 2. Cloud Infrastructure | **Complete** | Neon Postgres (Singapore), Vercel deployment, GitHub Actions CI |
 | 3. Income & Expenses | **Complete** | Transaction CRUD, on-behalf recording, account management, monthly summaries, dashboard KPIs |
-| 4. API Extraction | Not started | Next up — see detailed plan below |
+| 4. API Extraction | **Complete** | Hono API server, JWT auth, frontend refactored to pure client, Vercel deployment, E2E + API test suites |
 | 5–11 | Not started | |
 
 ### Phase 2 Changelog
@@ -637,7 +718,7 @@ Lowest-confidence area is the auth provider UX (avoiding flash of unauthenticate
 
 ---
 
-## 9. Future Considerations
+## 10. Future Considerations
 
 - Loan & liability tracking with amortization
 - Goal-based savings (retirement, education, travel)
