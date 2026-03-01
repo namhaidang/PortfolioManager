@@ -66,6 +66,11 @@ jobs:
       - run: npx playwright install --with-deps chromium
         working-directory: apps/web
 
+      - name: Create .env for API server
+        run: |
+          echo "DATABASE_URL=$DATABASE_URL" > apps/api/.env
+          echo "JWT_SECRET=$JWT_SECRET" >> apps/api/.env
+
       - run: npx turbo run build
 
       - run: npx turbo run e2e
