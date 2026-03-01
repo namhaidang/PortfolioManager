@@ -11,6 +11,8 @@
     "db:push": "npm run db:push -w packages/db",
     "db:generate": "npm run db:generate -w packages/db",
     "db:studio": "npm run db:studio -w packages/db",
+    "test": "turbo run test",
+    "e2e": "npm run e2e -w apps/web",
     "db:seed": "npm run db:seed -w packages/db"
   },
   "devDependencies": {

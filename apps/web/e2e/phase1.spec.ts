@@ -1,17 +1,13 @@
 import { test, expect } from "@playwright/test";
+import { BASE_URL, SCREENSHOTS_DIR, login } from "./helpers";
 import { join } from "path";
-
-const BASE_URL = "http://localhost:3000";
-const SCREENSHOTS_DIR = join(__dirname, "screenshots");
 
 test.describe("Phase 1 Features", () => {
   test.beforeEach(async ({ page }) => {
-    // Ensure we're not logged in for login tests
     await page.goto(`${BASE_URL}/login`);
   });
 
   test("1. Login page - verify form with email and password fields", async ({ page }) => {
-    await page.goto(`${BASE_URL}/login`);
     await expect(page.getByRole("textbox", { name: /email/i })).toBeVisible();
     await expect(page.getByLabel(/password/i)).toBeVisible();
     await expect(page.getByRole("button", { name: /sign in/i })).toBeVisible();
@@ -28,23 +24,14 @@ test.describe("Phase 1 Features", () => {
   });
 
   test("3. Valid login - redirects to dashboard", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
+    await login(page);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "03-dashboard.png"), fullPage: true });
   });
 
   test("4. App shell - sidebar and user menu", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    // Login first
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
+    await login(page);
 
-    // Check sidebar navigation links
     await expect(page.getByRole("link", { name: /dashboard/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /income/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /expenses/i })).toBeVisible();
@@ -52,83 +39,56 @@ test.describe("Phase 1 Features", () => {
     await expect(page.getByRole("link", { name: /budgets/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /reports/i })).toBeVisible();
 
-    // Check user menu (avatar or name)
     await expect(page.getByText(/owner/i).first()).toBeVisible({ timeout: 5000 });
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "04-app-shell.png"), fullPage: true });
   });
 
   test("5a. Navigate to Income page", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-
+    await login(page);
     await page.getByRole("link", { name: /income/i }).click();
     await expect(page).toHaveURL(`${BASE_URL}/income`);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "05a-income.png"), fullPage: true });
   });
 
   test("5b. Navigate to Expenses page", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-
+    await login(page);
     await page.getByRole("link", { name: /expenses/i }).click();
     await expect(page).toHaveURL(`${BASE_URL}/expenses`);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "05b-expenses.png"), fullPage: true });
   });
 
   test("5c. Navigate to Portfolio page", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-
+    await login(page);
     await page.getByRole("link", { name: /portfolio/i }).click();
     await expect(page).toHaveURL(`${BASE_URL}/portfolio`);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "05c-portfolio.png"), fullPage: true });
   });
 
   test("5d. Navigate to Settings page", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-
+    await login(page);
     await page.getByRole("link", { name: /settings/i }).click();
     await expect(page).toHaveURL(`${BASE_URL}/settings`);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "05d-settings.png"), fullPage: true });
   });
 
   test("6. Theme switching - Dark and Light", async ({ page }) => {
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-
+    await login(page);
     await page.getByRole("link", { name: /settings/i }).click();
     await expect(page).toHaveURL(`${BASE_URL}/settings`);
 
-    // Switch to Dark theme
     await page.getByRole("button", { name: /dark/i }).click();
-    await page.waitForTimeout(500); // Allow theme to apply
+    await page.waitForTimeout(500);
     await page.screenshot({ path: join(SCREENSHOTS_DIR, "06-dark-theme.png"), fullPage: true });
 
-    // Switch back to Light theme
     await page.getByRole("button", { name: /light/i }).click();
     await page.waitForTimeout(500);
   });
 
   test("7. Sign out - redirects to login", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-    await page.getByLabel(/password/i).fill("password123");
-    await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
+    await login(page);
 
-    // Open user menu (click trigger - avatar/name in header)
-    await page.locator('[data-slot="dropdown-menu-trigger"]').last().click();
+    await page.getByTestId("user-menu-trigger").click();
     await page.getByRole("menuitem", { name: /sign out/i }).click();
 
     await expect(page).toHaveURL(`${BASE_URL}/login`, { timeout: 5000 });

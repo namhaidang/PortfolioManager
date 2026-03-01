@@ -37,7 +37,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent outline-none">
+      <DropdownMenuTrigger data-testid="user-menu-trigger" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-accent outline-none">
         <Avatar className="h-8 w-8">
           <AvatarFallback className="text-xs">{initials}</AvatarFallback>
         </Avatar>

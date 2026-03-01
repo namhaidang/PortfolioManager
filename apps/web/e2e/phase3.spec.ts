@@ -1,16 +1,15 @@
 import { test, expect } from "@playwright/test";
+import {
+  BASE_URL,
+  SCREENSHOTS_DIR,
+  login,
+  createTransactionViaAPI,
+  deleteTransactionViaAPI,
+  findLatestTransactionViaAPI,
+  findAccountByNameViaAPI,
+  deleteAccountViaAPI,
+} from "./helpers";
 import { join } from "path";
-
-const BASE_URL = "http://localhost:3000";
-const SCREENSHOTS_DIR = join(__dirname, "screenshots");
-
-async function login(page: import("@playwright/test").Page) {
-  await page.goto(`${BASE_URL}/login`);
-  await page.getByRole("textbox", { name: /email/i }).fill("owner@family.local");
-  await page.getByLabel(/password/i).fill("password123");
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(`${BASE_URL}/dashboard`, { timeout: 10000 });
-}
 
 test.describe("Phase 3: Income & Expenses", () => {
   test.beforeEach(async ({ page }) => {
@@ -35,34 +34,35 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("button", { name: /add income/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
 
-      // Select category
-      await page.locator('[data-slot="dialog"]').getByText("Select category").click();
+      await page.getByTestId("select-category").click();
       await page.getByRole("option", { name: /salary/i }).click();
 
-      // Enter amount
       await page.getByPlaceholder("0.00").fill("15000000");
 
-      // Select account
-      await page.locator('[data-slot="dialog"]').getByText("Select account").click();
+      await page.getByTestId("select-account").click();
       await page.getByRole("option").first().click();
 
-      // Add notes
       await page.getByPlaceholder("Optional notes").fill("Monthly salary");
 
       await page.getByRole("button", { name: /save/i }).click();
       await expect(page.getByText("Transaction created")).toBeVisible({ timeout: 5000 });
 
-      await expect(page.getByText("Salary")).toBeVisible();
-      await expect(page.getByText("Monthly salary")).toBeVisible();
+      const tableBody = page.locator("table tbody");
+      await expect(tableBody.getByText("Salary").first()).toBeVisible();
+      await expect(tableBody.getByText("Monthly salary").first()).toBeVisible();
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-02-income-created.png"), fullPage: true });
+
+      const created = await findLatestTransactionViaAPI("income", "Monthly salary");
+      if (created) await deleteTransactionViaAPI(created.id);
     });
 
     test("edit income transaction", async ({ page }) => {
+      const tx = await createTransactionViaAPI("income", { notes: "E2E edit target" });
+
       await page.getByRole("link", { name: /income/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/income`);
 
-      // Click edit on first row
-      await page.locator("table tbody tr").first().getByRole("button").first().click();
+      await page.locator("table tbody tr").first().getByTestId("edit-transaction").click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await expect(page.getByRole("heading", { name: /edit income/i })).toBeVisible();
 
@@ -70,23 +70,20 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("button", { name: /update/i }).click();
       await expect(page.getByText("Transaction updated")).toBeVisible({ timeout: 5000 });
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-03-income-edited.png"), fullPage: true });
+
+      await deleteTransactionViaAPI(tx.id);
     });
 
     test("delete income transaction", async ({ page }) => {
+      await createTransactionViaAPI("income", { notes: "E2E delete target" });
+
       await page.getByRole("link", { name: /income/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/income`);
 
-      const rowCount = await page.locator("table tbody tr").count();
-
-      // Accept the confirm dialog
       page.on("dialog", (dialog) => dialog.accept());
-      await page.locator("table tbody tr").first().getByRole("button").nth(1).click();
+      await page.locator("table tbody tr").first().getByTestId("delete-transaction").click();
 
       await expect(page.getByText("Transaction deleted")).toBeVisible({ timeout: 5000 });
-
-      if (rowCount <= 1) {
-        await expect(page.getByText("No transactions found")).toBeVisible();
-      }
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-04-income-deleted.png"), fullPage: true });
     });
   });
@@ -99,26 +96,26 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("button", { name: /add expense/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
 
-      // Select category
-      await page.locator('[data-slot="dialog"]').getByText("Select category").click();
+      await page.getByTestId("select-category").click();
       await page.getByRole("option", { name: /food/i }).click();
 
-      // Enter amount
       await page.getByPlaceholder("0.00").fill("500000");
 
-      // Select account
-      await page.locator('[data-slot="dialog"]').getByText("Select account").click();
+      await page.getByTestId("select-account").click();
       await page.getByRole("option").first().click();
 
-      // Toggle expense tags
-      await page.getByText("needs").click();
+      await page.getByRole("dialog").getByText("needs").click();
 
       await page.getByRole("button", { name: /save/i }).click();
       await expect(page.getByText("Transaction created")).toBeVisible({ timeout: 5000 });
 
-      await expect(page.getByText("Food")).toBeVisible();
-      await expect(page.getByText("needs")).toBeVisible();
+      const tableBody = page.locator("table tbody");
+      await expect(tableBody.getByText("Food").first()).toBeVisible();
+      await expect(tableBody.getByText("needs").first()).toBeVisible();
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-05-expense-with-tags.png"), fullPage: true });
+
+      const created = await findLatestTransactionViaAPI("expense");
+      if (created) await deleteTransactionViaAPI(created.id);
     });
   });
 
@@ -127,8 +124,7 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("link", { name: /income/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/income`);
 
-      // Open category filter
-      await page.locator("button", { hasText: "All categories" }).click();
+      await page.getByTestId("filter-category").click();
       await page.getByRole("option", { name: /salary/i }).click();
       await page.waitForTimeout(500);
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-06-filtered-by-category.png"), fullPage: true });
@@ -138,7 +134,7 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("link", { name: /income/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/income`);
 
-      await page.locator("button", { hasText: "All users" }).click();
+      await page.getByTestId("filter-user").click();
       await page.getByRole("option", { name: /owner/i }).click();
       await page.waitForTimeout(500);
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-07-filtered-by-user.png"), fullPage: true });
@@ -147,31 +143,39 @@ test.describe("Phase 3: Income & Expenses", () => {
 
   test.describe("Account Management", () => {
     test("create new account in settings", async ({ page }) => {
+      const accountName = `E2E-Acct-${Date.now()}`;
+
       await page.getByRole("link", { name: /settings/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/settings`);
 
-      await expect(page.getByText("Accounts")).toBeVisible();
+      await expect(page.getByTestId("accounts-section")).toBeVisible();
       await page.getByRole("button", { name: /add/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
 
-      await page.getByPlaceholder("e.g. Vietcombank").fill("BIDV Savings");
+      await page.getByPlaceholder("e.g. Vietcombank").fill(accountName);
       await page.getByRole("button", { name: /create account/i }).click();
 
       await expect(page.getByText("Account created")).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText("BIDV Savings")).toBeVisible();
+      await expect(page.getByText(accountName)).toBeVisible();
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-08-account-created.png"), fullPage: true });
+
+      const acct = await findAccountByNameViaAPI(accountName);
+      if (acct) await deleteAccountViaAPI(acct.id);
     });
 
     test("deactivate and reactivate account", async ({ page }) => {
       await page.getByRole("link", { name: /settings/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/settings`);
 
-      const deactivateBtn = page.getByRole("button", { name: /deactivate/i }).first();
-      await deactivateBtn.click();
-      await expect(page.getByText("Account deactivated")).toBeVisible({ timeout: 5000 });
-      await expect(page.getByText("Inactive")).toBeVisible();
+      const section = page.getByTestId("accounts-section");
+      await section.getByRole("button", { name: /deactivate/i }).first().waitFor();
+      const inactiveBefore = await section.getByText("Inactive").count();
 
-      const activateBtn = page.getByRole("button", { name: /activate/i }).first();
+      await section.getByRole("button", { name: /deactivate/i }).first().click();
+      await expect(page.getByText("Account deactivated")).toBeVisible({ timeout: 5000 });
+      await expect(section.getByText("Inactive")).toHaveCount(inactiveBefore + 1);
+
+      const activateBtn = section.getByRole("button", { name: /^activate$/i }).first();
       await activateBtn.click();
       await expect(page.getByText("Account activated")).toBeVisible({ timeout: 5000 });
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-09-account-toggled.png"), fullPage: true });
@@ -185,8 +189,7 @@ test.describe("Phase 3: Income & Expenses", () => {
       await expect(page.getByText("Monthly Income")).toBeVisible();
       await expect(page.getByText("Monthly Expenses")).toBeVisible();
 
-      // Net Worth and Portfolio should still be placeholders
-      const netWorthCard = page.locator("text=Net Worth").locator("..");
+      const netWorthCard = page.getByTestId("kpi-net-worth");
       await expect(netWorthCard.getByText("--")).toBeVisible();
 
       await page.screenshot({ path: join(SCREENSHOTS_DIR, "p3-10-dashboard-kpis.png"), fullPage: true });

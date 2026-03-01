@@ -192,7 +192,7 @@ export function TransactionForm({
           <div className="space-y-2">
             <Label>Category</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-category">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
@@ -223,7 +223,7 @@ export function TransactionForm({
           <div className="space-y-2">
             <Label>Account</Label>
             <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger>
+              <SelectTrigger data-testid="select-account">
                 <SelectValue placeholder="Select account" />
               </SelectTrigger>
               <SelectContent>

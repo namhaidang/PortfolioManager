@@ -10,6 +10,6 @@
       "@repo/shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/**/*.ts", "__tests__/**/*.ts"],
   "exclude": ["node_modules", "api", "dist"]
 }

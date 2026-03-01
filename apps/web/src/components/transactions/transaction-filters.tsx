@@ -61,7 +61,7 @@ export function TransactionFilters({
         value={filters.userId || "all"}
         onValueChange={(v) => update({ userId: v === "all" ? "" : v })}
       >
-        <SelectTrigger className="w-[140px]">
+        <SelectTrigger className="w-[140px]" data-testid="filter-user">
           <SelectValue placeholder="All users" />
         </SelectTrigger>
         <SelectContent>
@@ -78,7 +78,7 @@ export function TransactionFilters({
         value={filters.categoryId || "all"}
         onValueChange={(v) => update({ categoryId: v === "all" ? "" : v })}
       >
-        <SelectTrigger className="w-[160px]">
+        <SelectTrigger className="w-[160px]" data-testid="filter-category">
           <SelectValue placeholder="All categories" />
         </SelectTrigger>
         <SelectContent>

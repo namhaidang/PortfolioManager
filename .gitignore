@@ -20,6 +20,12 @@ packages/db/.env
 # database
 data/
 
+# playwright / e2e
+apps/web/e2e-results/
+apps/web/e2e/screenshots/
+test-results/
+playwright-report/
+
 # misc
 .DS_Store
 *.pem

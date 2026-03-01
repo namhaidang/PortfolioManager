@@ -43,7 +43,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card data-testid="kpi-net-worth">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Net Worth</CardTitle>
             <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -56,7 +56,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="kpi-monthly-income">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Monthly Income</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -71,7 +71,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="kpi-monthly-expenses">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Monthly Expenses</CardTitle>
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
@@ -86,7 +86,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card data-testid="kpi-portfolio-value">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Portfolio Value</CardTitle>
             <LayoutDashboard className="h-4 w-4 text-muted-foreground" />

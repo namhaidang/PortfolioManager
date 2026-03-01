@@ -100,7 +100,7 @@ export function AccountsSection() {
   }
 
   return (
-    <Card>
+    <Card data-testid="accounts-section">
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>

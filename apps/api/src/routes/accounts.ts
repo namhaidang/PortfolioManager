@@ -60,4 +60,11 @@ router.patch("/:id", async (c) => {
   return c.json(row);
 });
 
+router.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  const [row] = await db.delete(accounts).where(eq(accounts.id, id)).returning();
+  if (!row) return c.json({ error: "Account not found" }, 404);
+  return c.json({ success: true });
+});
+
 export default router;

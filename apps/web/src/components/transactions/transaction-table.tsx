@@ -106,6 +106,7 @@ export function TransactionTable({
               <TableCell>
                 <div className="flex gap-1">
                   <Button
+                    data-testid="edit-transaction"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
@@ -114,6 +115,7 @@ export function TransactionTable({
                     <Pencil className="h-3.5 w-3.5" />
                   </Button>
                   <Button
+                    data-testid="delete-transaction"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive"
