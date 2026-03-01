@@ -148,8 +148,9 @@ test.describe("Phase 3: Income & Expenses", () => {
       await page.getByRole("link", { name: /settings/i }).click();
       await expect(page).toHaveURL(`${BASE_URL}/settings`);
 
-      await expect(page.getByTestId("accounts-section")).toBeVisible();
-      await page.getByRole("button", { name: /add/i }).click();
+      const section = page.getByTestId("accounts-section");
+      await expect(section).toBeVisible();
+      await section.getByRole("button", { name: /add/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
 
       await page.getByPlaceholder("e.g. Vietcombank").fill(accountName);
