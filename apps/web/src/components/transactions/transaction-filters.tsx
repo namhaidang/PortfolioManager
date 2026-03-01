@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,7 @@ export interface Filters {
   dateFrom: string;
   dateTo: string;
   search: string;
+  recurringRuleId: string;
 }
 
 interface TransactionFiltersProps {
@@ -27,6 +29,7 @@ interface TransactionFiltersProps {
   accounts: AccountOption[];
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
+  onClearRecurringFilter?: () => void;
 }
 
 export function TransactionFilters({
@@ -35,6 +38,7 @@ export function TransactionFilters({
   accounts,
   filters,
   onFiltersChange,
+  onClearRecurringFilter,
 }: TransactionFiltersProps) {
   const [searchInput, setSearchInput] = useState(filters.search);
   const filtersRef = useRef(filters);
@@ -56,7 +60,22 @@ export function TransactionFilters({
   }
 
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="flex flex-wrap items-center gap-3">
+      {filters.recurringRuleId && onClearRecurringFilter && (
+        <span className="inline-flex items-center" role="group" aria-label="Recurring rule filter active">
+          <Badge variant="secondary" className="gap-1 pr-1">
+            Filtered by recurring rule
+            <button
+              type="button"
+              onClick={onClearRecurringFilter}
+              className="ml-0.5 rounded-sm p-0.5 hover:bg-muted"
+              aria-label="Clear recurring filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        </span>
+      )}
       <Select
         value={filters.userId || "all"}
         onValueChange={(v) => update({ userId: v === "all" ? "" : v })}

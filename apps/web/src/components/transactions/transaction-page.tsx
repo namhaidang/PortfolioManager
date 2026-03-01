@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,10 +32,14 @@ const EMPTY_FILTERS: Filters = {
   dateFrom: "",
   dateTo: "",
   search: "",
+  recurringRuleId: "",
 };
 
 export function TransactionPage({ type, title, description }: TransactionPageProps) {
   const { user } = useAuth();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [users, setUsers] = useState<HouseholdUser[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
@@ -45,7 +50,20 @@ export function TransactionPage({ type, title, description }: TransactionPagePro
   const [summary, setSummary] = useState<MonthlySummaryData | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionRow | null>(null);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [filters, setFilters] = useState<Filters>(() => {
+    const rid = searchParams.get("recurringRuleId") ?? "";
+    return { ...EMPTY_FILTERS, recurringRuleId: rid };
+  });
+  // null = first run; only reset page when recurringRuleId changes after mount
+  const prevRecurringRuleIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const rid = searchParams.get("recurringRuleId") ?? "";
+    const prevRid = prevRecurringRuleIdRef.current;
+    prevRecurringRuleIdRef.current = rid;
+    setFilters((prev) => (prev.recurringRuleId !== rid ? { ...prev, recurringRuleId: rid } : prev));
+    if (prevRid !== null && prevRid !== rid) setPage(1);
+  }, [searchParams]);
 
   useEffect(() => {
     Promise.all([
@@ -70,6 +88,7 @@ export function TransactionPage({ type, title, description }: TransactionPagePro
     if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
     if (filters.dateTo) params.set("dateTo", filters.dateTo);
     if (filters.search) params.set("search", filters.search);
+    if (filters.recurringRuleId) params.set("recurringRuleId", filters.recurringRuleId);
 
     try {
       const res = await apiFetch(`/transactions?${params}`);
@@ -129,6 +148,15 @@ export function TransactionPage({ type, title, description }: TransactionPagePro
     fetchSummary();
   }
 
+  function handleClearRecurringFilter() {
+    setFilters((prev) => ({ ...prev, recurringRuleId: "" }));
+    setPage(1);
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("recurringRuleId");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -150,6 +178,9 @@ export function TransactionPage({ type, title, description }: TransactionPagePro
         accounts={accounts}
         filters={filters}
         onFiltersChange={(f) => { setFilters(f); setPage(1); }}
+        onClearRecurringFilter={
+          filters.recurringRuleId ? handleClearRecurringFilter : undefined
+        }
       />
 
       <TransactionTable
@@ -160,6 +191,7 @@ export function TransactionPage({ type, title, description }: TransactionPagePro
         onPageChange={setPage}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        recurringRuleFilterActive={!!filters.recurringRuleId}
       />
 
       <TransactionForm

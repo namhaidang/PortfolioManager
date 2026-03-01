@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +25,7 @@ interface TransactionTableProps {
   onPageChange: (page: number) => void;
   onEdit: (tx: TransactionRow) => void;
   onDelete: (id: string) => void;
+  recurringRuleFilterActive?: boolean;
 }
 
 export function TransactionTable({
@@ -35,6 +36,7 @@ export function TransactionTable({
   onPageChange,
   onEdit,
   onDelete,
+  recurringRuleFilterActive = false,
 }: TransactionTableProps) {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -51,7 +53,9 @@ export function TransactionTable({
   if (transactions.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground">
-        No transactions found. Add one to get started.
+        {recurringRuleFilterActive
+          ? "No transactions generated yet for this recurring rule."
+          : "No transactions found. Add one to get started."}
       </div>
     );
   }
@@ -76,7 +80,17 @@ export function TransactionTable({
               <TableCell className="whitespace-nowrap">
                 {formatDate(tx.date)}
               </TableCell>
-              <TableCell>{tx.categoryName}</TableCell>
+              <TableCell>
+                <span className="flex items-center gap-1.5">
+                  {tx.recurringRuleId && (
+                    <Repeat
+                      className="h-3.5 w-3.5 text-muted-foreground shrink-0"
+                      aria-label="From recurring rule"
+                    />
+                  )}
+                  {tx.categoryName}
+                </span>
+              </TableCell>
               <TableCell className="text-right font-medium whitespace-nowrap">
                 {formatCurrency(
                   parseNumeric(tx.amount),

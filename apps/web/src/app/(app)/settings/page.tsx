@@ -7,6 +7,7 @@ import { Moon, Sun, User } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { apiFetch } from "@/lib/api-client";
 import { AccountsSection } from "@/components/settings/accounts-section";
+import { RecurringSection } from "@/components/settings/recurring-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -110,6 +111,8 @@ export default function SettingsPage() {
       </Card>
 
       <AccountsSection />
+
+      <RecurringSection />
 
       <Card>
         <CardHeader>

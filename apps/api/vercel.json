@@ -1,4 +1,10 @@
 {
   "installCommand": "cd ../.. && npm install",
-  "buildCommand": "npm run build"
+  "buildCommand": "npm run build",
+  "crons": [
+    {
+      "path": "/cron/recurring-generate",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

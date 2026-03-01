@@ -128,6 +128,7 @@ export const closedPositions = pgTable("closed_positions", {
 export const recurringRules = pgTable("recurring_rules", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull().references(() => users.id),
+  recordedByUserId: text("recorded_by_user_id").references(() => users.id),
   type: text("type", { enum: ["income", "expense"] }).notNull(),
   categoryId: text("category_id").notNull().references(() => categories.id),
   accountId: text("account_id").notNull().references(() => accounts.id),

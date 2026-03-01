@@ -24,10 +24,17 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiFetch } from "@/lib/api-client";
+import { parseNumeric } from "@repo/shared";
 import type { HouseholdUser, CategoryOption, AccountOption, TransactionRow } from "@repo/shared/types";
 
 const EXPENSE_TAGS = ["needs", "wants", "tax-deductible"];
+const FREQUENCIES = [
+  { value: "monthly", label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "yearly", label: "Yearly" },
+];
 
 interface TransactionFormProps {
   open: boolean;
@@ -63,6 +70,10 @@ export function TransactionForm({
   const [tags, setTags] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState("monthly");
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [description, setDescription] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -82,6 +93,10 @@ export function TransactionForm({
       setAmount("");
       setNotes("");
       setTags([]);
+      setIsRecurring(false);
+      setFrequency("monthly");
+      setStartDate(new Date());
+      setDescription("");
     }
   }, [open, transaction, currentUserId]);
 
@@ -99,34 +114,57 @@ export function TransactionForm({
       toast.error("Please select a category and account");
       return;
     }
+    if (isRecurring && !description.trim()) {
+      toast.error("Please enter a description for the recurring rule");
+      return;
+    }
 
     setSaving(true);
-    const body = {
-      userId,
-      accountId,
-      type,
-      categoryId,
-      date: format(date, "yyyy-MM-dd"),
-      amount: parseFloat(amount),
-      notes: notes || null,
-      tags: tags.length > 0 ? tags : null,
-    };
-
     try {
-      const url = isEdit
-        ? `/transactions/${transaction!.id}`
-        : "/transactions";
-      const res = await apiFetch(url, {
-        method: isEdit ? "PATCH" : "POST",
-        body: JSON.stringify(body),
-      });
-
-      if (res.ok) {
-        toast.success(isEdit ? "Transaction updated" : "Transaction created");
-        onSaved();
+      if (isRecurring && !isEdit) {
+        const body = {
+          userId,
+          type,
+          categoryId,
+          accountId,
+          amount: parseNumeric(amount),
+          currency: selectedAccount?.currency ?? "VND",
+          frequency,
+          startDate: format(startDate, "yyyy-MM-dd"),
+          description: description.trim(),
+          notes: notes || null,
+        };
+        const res = await apiFetch("/recurring-rules", { method: "POST", body: JSON.stringify(body) });
+        if (res.ok) {
+          toast.success("Recurring rule created");
+          onSaved();
+        } else {
+          const err = await res.json();
+          toast.error(err.error || "Something went wrong");
+        }
       } else {
-        const err = await res.json();
-        toast.error(err.error || "Something went wrong");
+        const body = {
+          userId,
+          accountId,
+          type,
+          categoryId,
+          date: format(date, "yyyy-MM-dd"),
+          amount: parseFloat(amount),
+          notes: notes || null,
+          tags: tags.length > 0 ? tags : null,
+        };
+        const url = isEdit ? `/transactions/${transaction!.id}` : "/transactions";
+        const res = await apiFetch(url, {
+          method: isEdit ? "PATCH" : "POST",
+          body: JSON.stringify(body),
+        });
+        if (res.ok) {
+          toast.success(isEdit ? "Transaction updated" : "Transaction created");
+          onSaved();
+        } else {
+          const err = await res.json();
+          toast.error(err.error || "Something went wrong");
+        }
       }
     } finally {
       setSaving(false);
@@ -164,8 +202,21 @@ export function TransactionForm({
             </Select>
           </div>
 
+          {!isEdit && (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="recurring"
+                checked={isRecurring}
+                onCheckedChange={(v) => setIsRecurring(v === true)}
+              />
+              <Label htmlFor="recurring" className="cursor-pointer font-normal">
+                Make recurring
+              </Label>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label>{isRecurring ? "Start date" : "Date"}</Label>
             <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -173,21 +224,53 @@ export function TransactionForm({
                   className="w-full justify-start text-left font-normal"
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(date, "d MMM yyyy")}
+                  {format(isRecurring ? startDate : date, "d MMM yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
                 <Calendar
                   mode="single"
-                  selected={date}
+                  selected={isRecurring ? startDate : date}
                   onSelect={(d) => {
-                    if (d) setDate(d);
+                    if (d) {
+                      if (isRecurring) setStartDate(d);
+                      else setDate(d);
+                    }
                     setCalendarOpen(false);
                   }}
                 />
               </PopoverContent>
             </Popover>
           </div>
+
+          {isRecurring && (
+            <>
+              <div className="space-y-2">
+                <Label>Frequency</Label>
+                <Select value={frequency} onValueChange={setFrequency}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {FREQUENCIES.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Description</Label>
+                <Input
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. Monthly Salary"
+                  required={isRecurring}
+                />
+              </div>
+            </>
+          )}
 
           <div className="space-y-2">
             <Label>Category</Label>

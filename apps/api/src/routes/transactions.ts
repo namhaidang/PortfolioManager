@@ -18,6 +18,7 @@ router.get("/", async (c) => {
   const accountId = sp.accountId;
   const dateFrom = sp.dateFrom;
   const dateTo = sp.dateTo;
+  const recurringRuleId = sp.recurringRuleId;
   const search = sp.search;
   const sortBy = sp.sortBy || "date";
   const sortOrder = sp.sortOrder || "desc";
@@ -32,6 +33,7 @@ router.get("/", async (c) => {
   if (accountId) conditions.push(eq(transactions.accountId, accountId));
   if (dateFrom) conditions.push(gte(transactions.date, dateFrom));
   if (dateTo) conditions.push(lte(transactions.date, dateTo));
+  if (recurringRuleId) conditions.push(eq(transactions.recurringRuleId, recurringRuleId));
   if (search) conditions.push(ilike(transactions.notes, `%${search}%`));
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -51,6 +53,7 @@ router.get("/", async (c) => {
         accountId: transactions.accountId,
         type: transactions.type,
         categoryId: transactions.categoryId,
+        recurringRuleId: transactions.recurringRuleId,
         date: transactions.date,
         amount: transactions.amount,
         notes: transactions.notes,

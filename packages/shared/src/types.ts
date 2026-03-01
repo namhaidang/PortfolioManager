@@ -41,6 +41,7 @@ export interface TransactionRow {
   accountId: string;
   type: string;
   categoryId: string | null;
+  recurringRuleId: string | null;
   date: string;
   amount: string;
   notes: string | null;
@@ -58,4 +59,28 @@ export interface MonthlySummaryData {
   expenses: number;
   prevIncome: number;
   prevExpenses: number;
+}
+
+export interface RecurringRuleRow {
+  id: string;
+  userId: string;
+  recordedByUserId: string | null;
+  type: string;
+  categoryId: string;
+  accountId: string;
+  amount: string;
+  currency: string;
+  frequency: string;
+  startDate: string;
+  endDate: string | null;
+  maxOccurrences: number | null;
+  occurrenceCount: number;
+  description: string;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  categoryName: string | null;
+  accountName: string | null;
+  userName: string | null;
+  nextDueDate: string;
 }

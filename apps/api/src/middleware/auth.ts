@@ -3,7 +3,8 @@ import { verify } from "hono/jwt";
 import type { AppEnv } from "../types.js";
 
 export const authMiddleware: MiddlewareHandler<AppEnv> = async (c, next) => {
-  if (c.req.path === "/auth/login" || c.req.path === "/health") return next();
+  if (c.req.path === "/auth/login" || c.req.path === "/health" || c.req.path.startsWith("/cron"))
+    return next();
 
   const header = c.req.header("Authorization");
   if (!header?.startsWith("Bearer ")) {

@@ -93,12 +93,15 @@ PortfolioManager/
 
 Internal packages use `@repo/db` and `@repo/shared` import aliases. `@repo/db` is consumed only by `apps/api`; `@repo/shared` is consumed by both apps.
 
+**Database migrations**: After schema changes, run `npm run db:push` (or `db:generate` + migrate) before first use.
+
 **Environment variables** (set in Vercel dashboard and local `.env`):
 
 | Variable | App | Purpose |
 |----------|-----|---------|
 | `DATABASE_URL` | `apps/api` | Neon Postgres connection string |
 | `JWT_SECRET` | `apps/api` | JWT signing key |
+| `CRON_SECRET` | `apps/api` | Secret for Vercel cron auth (recurring generator) |
 | `CORS_ORIGIN` | `apps/api` | Allowed frontend origin(s) |
 | `NEXT_PUBLIC_API_URL` | `apps/web` | API base URL (e.g. `https://portfolio-api.vercel.app`) |
 
@@ -614,7 +617,8 @@ GitHub Actions CI workflow (.github/workflows/ci.yml)
 | 2. Cloud Infrastructure | **Complete** | Neon Postgres (Singapore), Vercel deployment, GitHub Actions CI |
 | 3. Income & Expenses | **Complete** | Transaction CRUD, on-behalf recording, account management, monthly summaries, dashboard KPIs |
 | 4. API Extraction | **Complete** | Hono API server, JWT auth, frontend refactored to pure client, Vercel deployment, E2E + API test suites |
-| 5–11 | Not started | |
+| 5. Recurring Rules | **Complete** | Recurring rule CRUD, on-behalf support, Settings RecurringSection, Income/Expense form toggle, Vercel cron generator |
+| 6–11 | Not started | |
 
 ### Phase 2 Changelog
 
@@ -640,6 +644,18 @@ GitHub Actions CI workflow (.github/workflows/ci.yml)
 - Added dependencies: `react-day-picker` ^9.14.0, `date-fns` ^4.1.0
 - Added shared utilities: `parseNumeric()`, `formatDate()` in `@repo/shared`
 - Added `lib/types.ts` with shared Phase 3 types: `HouseholdUser`, `CategoryOption`, `AccountOption`, `TransactionRow`, `MonthlySummaryData`
+
+### Phase 5 Changelog
+
+- Added `recordedByUserId` to `recurringRules` schema for on-behalf audit
+- Created **recurring-rules API** (`GET/POST/PATCH/DELETE /recurring-rules`) with nextDueDate computed per rule
+- Added `recurringRuleId` filter to `GET /transactions`
+- Created **recurring-generator service** — daily cron generates transactions from active rules (monthly/quarterly/yearly)
+- Added **Vercel Cron** route `GET /cron/recurring-generate` (CRON_SECRET auth), schedule `0 8 * * *` UTC. **Note**: Cron runs at 08:00 UTC; "today" for due-date checks is UTC date. Users in other timezones may see transactions generated on the previous or next local date.
+- **RecurringSection** in Settings — list, create, edit, pause/resume, delete rules; For User defaults to current user
+- **Recurring toggle** on Income/Expense forms — when enabled, creates RecurringRule instead of one-off transaction
+- Auth middleware skips JWT for `/cron/*` paths
+- Added `RecurringRuleRow` to `@repo/shared/types`; `date-fns` to `apps/api`
 
 ### Phase 4 Plan — API Extraction & Auth Refactor
 
